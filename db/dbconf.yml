@@ -1,0 +1,7 @@
+development:
+  driver: sqlite3
+  open: db/towncrier.development.db
+
+production:
+  driver: sqlite3
+  open: $DATABASE_FILE
