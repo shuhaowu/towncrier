@@ -28,7 +28,7 @@ func (c *Channel) ShouldSendImmediately() bool {
 
 type ConfigJSON struct {
 	Channels    []*Channel
-	Subscribers []*backend.Subscriber
+	Subscribers []backend.Subscriber
 }
 
 type Config struct {
@@ -38,7 +38,7 @@ type Config struct {
 	*sync.Mutex
 	ConfigPath  string
 	Channels    map[string]*Channel
-	Subscribers map[string]*backend.Subscriber
+	Subscribers map[string]backend.Subscriber
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -47,7 +47,7 @@ func LoadConfig(configPath string) (*Config, error) {
 		ConfigPath: configPath,
 
 		Channels:    make(map[string]*Channel),
-		Subscribers: make(map[string]*backend.Subscriber),
+		Subscribers: make(map[string]backend.Subscriber),
 	}
 
 	return config, config.Reload()
@@ -72,7 +72,7 @@ func (c *Config) Reload() error {
 		channels[channel.Name] = channel
 	}
 
-	subscribers := make(map[string]*backend.Subscriber)
+	subscribers := make(map[string]backend.Subscriber)
 	for _, subscriber := range configJson.Subscribers {
 		subscribers[subscriber.UniqueName] = subscriber
 	}

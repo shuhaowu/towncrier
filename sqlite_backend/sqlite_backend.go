@@ -56,7 +56,10 @@ func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 	}
 
 	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
-	dbmap.AddTableWithName(Notification{}, "notifications").SetKeys(true, "id")
+
+	// We need to ignore tags as that's a []string
+	table := dbmap.AddTableWithName(Notification{}, "notifications").SetKeys(true, "id")
+	table.ColMap("Tags").SetTransient(true)
 
 	config, err := LoadConfig(data[1])
 	if err != nil {
@@ -127,9 +130,9 @@ func (b *SQLiteNotificationBackend) GetChannels() []*Channel {
 	return channelsList
 }
 
-func (b *SQLiteNotificationBackend) GetSubscribers() []*backend.Subscriber {
+func (b *SQLiteNotificationBackend) GetSubscribers() []backend.Subscriber {
 	subscribers := b.config.Subscribers
-	subscribersList := make([]*backend.Subscriber, len(subscribers))
+	subscribersList := make([]backend.Subscriber, len(subscribers))
 	i := 0
 	for _, subscriber := range subscribers {
 		subscribersList[i] = subscriber

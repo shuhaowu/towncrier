@@ -1,10 +1,31 @@
 package sqlite_backend
 
-import "gitlab.com/shuhao/towncrier/backend"
+import (
+	"strings"
+
+	"gitlab.com/shuhao/towncrier/backend"
+	"gopkg.in/gorp.v1"
+)
 
 type Notification struct {
-	Id int64 `db:"id"`
+	Id         int64 `db:"id"`
+	TagsString string
 	backend.Notification
+}
+
+func (n *Notification) PreInsert(s gorp.SqlExecutor) error {
+	n.TagsString = strings.Join(n.Tags, ",")
+	return nil
+}
+
+func (n *Notification) PreUpdate(s gorp.SqlExecutor) error {
+	n.TagsString = strings.Join(n.Tags, ",")
+	return nil
+}
+
+func (n *Notification) PostGet(s gorp.SqlExecutor) error {
+	n.Tags = strings.Split(n.TagsString, ",")
+	return nil
 }
 
 func (b *SQLiteNotificationBackend) saveNotification(notification *Notification) error {

@@ -10,13 +10,21 @@ type Subscriber struct {
 type Notifier interface {
 	Name() string
 	ShouldSendImmediately() bool
-	Send(notification Notification, subscriber *Subscriber) error
+	Send(notification Notification, subscriber Subscriber) error
 }
 
 var availableNotifiers map[string]Notifier = make(map[string]Notifier)
 
-func registerNotifier(n Notifier) {
+func RegisterNotifier(n Notifier) {
 	availableNotifiers[n.Name()] = n
+}
+
+func UnregisterNotifier(name string) {
+	delete(availableNotifiers, name)
+}
+
+func ClearAllNotifiers() {
+	availableNotifiers = make(map[string]Notifier)
 }
 
 func GetNotifier(name string) Notifier {
