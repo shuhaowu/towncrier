@@ -26,14 +26,19 @@ type SQLiteNotificationBackend struct {
 
 	config      *Config
 	quitChannel chan struct{}
+
+	forceConfigReload         chan struct{}
+	forceNotificationDelivery chan struct{}
 }
 
 var logger = logrus.New().WithField("backend", BackendName)
 
 func init() {
 	notificationBackend := &SQLiteNotificationBackend{
-		NeverSendNotifications: false,
-		quitChannel:            make(chan struct{}),
+		NeverSendNotifications:    false,
+		quitChannel:               make(chan struct{}),
+		forceConfigReload:         make(chan struct{}),
+		forceNotificationDelivery: make(chan struct{}),
 	}
 
 	backend.RegisterBackend(notificationBackend)
@@ -129,6 +134,14 @@ func (b *SQLiteNotificationBackend) GetChannels() []*Channel {
 	}
 
 	return channelsList
+}
+
+func (b *SQLiteNotificationBackend) ForceConfigReload() {
+	b.forceConfigReload <- struct{}{}
+}
+
+func (b *SQLiteNotificationBackend) ForceNotificationDelivery() {
+	b.forceNotificationDelivery <- struct{}{}
 }
 
 func (b *SQLiteNotificationBackend) GetSubscribers() []backend.Subscriber {

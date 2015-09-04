@@ -15,8 +15,9 @@ type SQLiteNotificationBackendSuite struct {
 	backend  *SQLiteNotificationBackend
 	notifier *TestNotifier
 
-	jimmy backend.Subscriber
-	bob   backend.Subscriber
+	jimmy        backend.Subscriber
+	bob          backend.Subscriber
+	notification backend.Notification
 }
 
 var _ = Suite(&SQLiteNotificationBackendSuite{})
@@ -34,6 +35,14 @@ func (s *SQLiteNotificationBackendSuite) SetUpSuite(c *C) {
 		Name:        "Bob the Cat",
 		Email:       "bob@the.cat",
 		PhoneNumber: "098-765-4321",
+	}
+
+	s.notification = backend.Notification{
+		Subject:  "subject",
+		Content:  "content",
+		Origin:   "origin",
+		Tags:     []string{"tag1", "tag2"},
+		Priority: backend.NormalPriority,
 	}
 }
 
@@ -85,14 +94,8 @@ func (s *SQLiteNotificationBackendSuite) TestBackendInitialize(c *C) {
 }
 
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c *C) {
-	notification := backend.Notification{
-		Subject:  "subject",
-		Content:  "content",
-		Channel:  "Channel1",
-		Origin:   "origin",
-		Tags:     []string{"tag1", "tag2"},
-		Priority: backend.NormalPriority,
-	}
+	notification := s.notification
+	notification.Channel = "Channel1"
 
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
@@ -102,7 +105,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 	c.Assert(s.notifier.log[0].subscriber, DeepEquals, s.jimmy)
 
 	notifications := []*Notification{}
-	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", "Channel1")
+	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)
 	c.Assert(err, IsNil)
 	c.Assert(notifications, HasLen, 1)
 
@@ -110,9 +113,40 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 }
 
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediately(c *C) {
+	notification := s.notification
+	notification.Channel = "Channel2"
+
+	err := s.backend.QueueNotification(notification)
+	c.Assert(err, IsNil)
+
+	c.Assert(s.notifier.log, HasLen, 0)
+
+	notifications := []*Notification{}
+	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)
+	c.Assert(err, IsNil)
+	c.Assert(notifications, HasLen, 1)
+
+	c.Assert(notifications[0].Notification, DeepEquals, notification)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotification(c *C) {
+	s.backend.NeverSendNotifications = true
+	defer func() { s.backend.NeverSendNotifications = false }()
+
+	notification := s.notification
+	notification.Channel = "Channel1"
+
+	err := s.backend.QueueNotification(notification)
+	c.Assert(err, IsNil)
+
+	c.Assert(s.notifier.log, HasLen, 0)
+
+	notifications := []*Notification{}
+	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)
+	c.Assert(err, IsNil)
+	c.Assert(notifications, HasLen, 1)
+
+	c.Assert(notifications[0].Notification, DeepEquals, notification)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestName(c *C) {
