@@ -60,6 +60,7 @@ func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 	// We need to ignore tags as that's a []string
 	table := dbmap.AddTableWithName(Notification{}, "notifications").SetKeys(true, "id")
 	table.ColMap("Tags").SetTransient(true)
+	table.ColMap("Priority").SetTransient(true)
 
 	config, err := LoadConfig(data[1])
 	if err != nil {

@@ -8,23 +8,30 @@ import (
 )
 
 type Notification struct {
-	Id         int64 `db:"id"`
-	TagsString string
+	Id          int64 `db:"id"`
+	TagsString  string
+	PriorityInt int64
 	backend.Notification
 }
 
-func (n *Notification) PreInsert(s gorp.SqlExecutor) error {
+func (n *Notification) predatabaseOp() {
 	n.TagsString = strings.Join(n.Tags, ",")
+	n.PriorityInt = int64(n.Priority)
+}
+
+func (n *Notification) PreInsert(s gorp.SqlExecutor) error {
+	n.predatabaseOp()
 	return nil
 }
 
 func (n *Notification) PreUpdate(s gorp.SqlExecutor) error {
-	n.TagsString = strings.Join(n.Tags, ",")
+	n.predatabaseOp()
 	return nil
 }
 
 func (n *Notification) PostGet(s gorp.SqlExecutor) error {
 	n.Tags = strings.Split(n.TagsString, ",")
+	n.Priority = backend.Priority(n.PriorityInt)
 	return nil
 }
 

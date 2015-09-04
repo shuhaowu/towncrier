@@ -84,7 +84,7 @@ func (s *SQLiteNotificationBackendSuite) TestBackendInitialize(c *C) {
 	c.Assert(s.backend.config.Channels["Channel2"], DeepEquals, channel2)
 }
 
-func (s *SQLiteNotificationBackendSuite) TestQueueNotification(c *C) {
+func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c *C) {
 	notification := backend.Notification{
 		Subject:  "subject",
 		Content:  "content",
@@ -100,6 +100,16 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotification(c *C) {
 	c.Assert(s.notifier.log, HasLen, 1)
 	c.Assert(s.notifier.log[0].notification, DeepEquals, notification)
 	c.Assert(s.notifier.log[0].subscriber, DeepEquals, s.jimmy)
+
+	notifications := []*Notification{}
+	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", "Channel1")
+	c.Assert(err, IsNil)
+	c.Assert(notifications, HasLen, 1)
+
+	c.Assert(notifications[0].Notification, DeepEquals, notification)
+}
+
+func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediately(c *C) {
 }
 
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotification(c *C) {

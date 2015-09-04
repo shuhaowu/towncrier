@@ -9,7 +9,7 @@ CREATE TABLE notifications (
   Content TEXT,
   Origin TEXT,
   TagsString TEXT,
-  Priority INTEGER
+  PriorityInt INTEGER
 );
 
 -- +goose Down
