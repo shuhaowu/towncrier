@@ -1,7 +1,11 @@
 package sqlite_backend
 
 import (
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/Sirupsen/logrus"
 
 	"gitlab.com/shuhao/towncrier/backend"
 	"gitlab.com/shuhao/towncrier/testhelpers"
@@ -9,13 +13,20 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func Test(t *testing.T) { TestingT(t) }
+var logrusTestHook = testhelpers.NewLogrusTestHook()
+
+func Test(t *testing.T) {
+	realLogger.Hooks.Add(logrusTestHook)
+
+	TestingT(t)
+}
 
 type SQLiteNotificationBackendSuite struct {
 	backend  *SQLiteNotificationBackend
 	notifier *TestNotifier
 
 	jimmy        backend.Subscriber
+	timmy        backend.Subscriber
 	bob          backend.Subscriber
 	notification backend.Notification
 }
@@ -27,6 +38,13 @@ func (s *SQLiteNotificationBackendSuite) SetUpSuite(c *C) {
 		UniqueName:  "jimmy",
 		Name:        "Jimmy the Cat",
 		Email:       "jimmy@the.cat",
+		PhoneNumber: "123-456-7890",
+	}
+
+	s.timmy = backend.Subscriber{
+		UniqueName:  "timmy",
+		Name:        "Timmy the Cat",
+		Email:       "timmy@the.cat",
 		PhoneNumber: "123-456-7890",
 	}
 
@@ -47,6 +65,8 @@ func (s *SQLiteNotificationBackendSuite) SetUpSuite(c *C) {
 }
 
 func (s *SQLiteNotificationBackendSuite) SetUpTest(c *C) {
+	logrusTestHook.ClearLogs()
+
 	s.backend = backend.GetBackend(BackendName).(*SQLiteNotificationBackend)
 	c.Assert(s.backend.Name(), Equals, BackendName)
 
@@ -153,10 +173,41 @@ func (s *SQLiteNotificationBackendSuite) TestName(c *C) {
 	c.Assert(s.backend.Name(), Equals, BackendName)
 }
 
-func (s *SQLiteNotificationBackendSuite) TestStartShutdown(c *C) {
+func (s *SQLiteNotificationBackendSuite) TestStartsConfigReloaderAndNotificationDelivery(c *C) {
+	wg := &sync.WaitGroup{}
+	s.backend.Start(wg)
+	s.backend.BlockUntilReady()
+	defer s.backend.Shutdown()
 
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 2)
+	entries := make(map[string]bool)
+
+	for _, entry := range logrusTestHook.Logs[logrus.InfoLevel] {
+		entries[entry.Message] = true
+	}
+
+	c.Assert(entries["started config reloader"], Equals, true)
+	c.Assert(entries["started notification delivery"], Equals, true)
+
+	err := changeTestConfig()
+	c.Assert(err, IsNil)
+	defer restoreTestConfig()
+
+	s.backend.ForceConfigReload()
+
+	// I'M SORRY
+	time.Sleep(500 * time.Millisecond)
+
+	channels := s.backend.GetChannels()
+	subscribers := s.backend.GetSubscribers()
+
+	c.Assert(channels, HasLen, 2)
+	c.Assert(channels[0].Name, Equals, "Channel1")
+	c.Assert(channels[0].Subscribers, DeepEquals, []string{"timmy"})
+
+	c.Assert(subscribers, HasLen, 2)
+	c.Assert(subscribers[0], DeepEquals, s.timmy)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestGetChannelsGetSubscribers(c *C) {
-
 }

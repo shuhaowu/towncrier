@@ -29,9 +29,13 @@ type SQLiteNotificationBackend struct {
 
 	forceConfigReload         chan struct{}
 	forceNotificationDelivery chan struct{}
+
+	// This channel needs information on it n times before the backend is ready
+	started chan struct{}
 }
 
-var logger = logrus.New().WithField("backend", BackendName)
+var realLogger = logrus.New()
+var logger = realLogger.WithField("backend", BackendName)
 
 func init() {
 	notificationBackend := &SQLiteNotificationBackend{
@@ -39,6 +43,7 @@ func init() {
 		quitChannel:               make(chan struct{}),
 		forceConfigReload:         make(chan struct{}),
 		forceNotificationDelivery: make(chan struct{}),
+		started:                   make(chan struct{}),
 	}
 
 	backend.RegisterBackend(notificationBackend)
@@ -117,6 +122,25 @@ func (b *SQLiteNotificationBackend) Start(wg *sync.WaitGroup) {
 
 func (b *SQLiteNotificationBackend) Shutdown() {
 	close(b.quitChannel)
+	close(b.forceConfigReload)
+	close(b.forceNotificationDelivery)
+
+	b.BlockUntilReady()
+}
+
+func (b *SQLiteNotificationBackend) BlockUntilReady() {
+	for i := 0; i < numberOfBackgroundTasks; i++ {
+		_, open := <-b.started
+		if !open {
+			return
+		}
+	}
+
+	close(b.started)
+}
+
+func (b *SQLiteNotificationBackend) startedOneTask() {
+	b.started <- struct{}{}
 }
 
 // When using this function in combination with GetSubscribers(), there is no

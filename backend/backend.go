@@ -10,6 +10,7 @@ type NotificationBackend interface {
 	QueueNotification(notification Notification) error
 	Initialize(openString string) error
 	Start(wg *sync.WaitGroup)
+	BlockUntilReady()
 	Shutdown()
 }
 

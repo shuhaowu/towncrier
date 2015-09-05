@@ -3,16 +3,23 @@ package testhelpers
 import "github.com/Sirupsen/logrus"
 
 type LogrusTestHook struct {
-	logs map[logrus.Level]*logrus.Entry
+	Logs map[logrus.Level][]*logrus.Entry
 }
 
 func NewLogrusTestHook() *LogrusTestHook {
-	return &LogrusTestHook{
-		logs: make(map[logrus.Level]*logrus.Entry),
+	hook := &LogrusTestHook{}
+
+	levels := hook.Levels()
+	hook.Logs = make(map[logrus.Level][]*logrus.Entry, len(levels))
+	for _, level := range levels {
+		hook.Logs[level] = make([]*logrus.Entry, 0)
 	}
+
+	return hook
 }
 
 func (h *LogrusTestHook) Fire(entry *logrus.Entry) error {
+	h.Logs[entry.Level] = append(h.Logs[entry.Level], entry)
 	return nil
 }
 
@@ -28,5 +35,5 @@ func (h *LogrusTestHook) Levels() []logrus.Level {
 }
 
 func (h *LogrusTestHook) ClearLogs() {
-	h.logs = make(map[logrus.Level]*logrus.Entry)
+	h.Logs = make(map[logrus.Level][]*logrus.Entry, len(h.Levels()))
 }

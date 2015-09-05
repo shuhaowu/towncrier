@@ -1,0 +1,39 @@
+{
+  "Subscribers": [
+    {
+      "UniqueName": "timmy",
+      "Name": "Timmy the Cat",
+      "Email": "timmy@the.cat",
+      "PhoneNumber": "123-456-7890"
+    },
+    {
+      "UniqueName": "bob",
+      "Name": "Bob the Cat",
+      "Email": "bob@the.cat",
+      "PhoneNumber": "098-765-4321"
+    }
+  ],
+  "Channels": [
+    {
+      "Name": "Channel1",
+      "Subscribers": [
+        "timmy"
+      ],
+      "Notifiers": [
+        "testnotify"
+      ],
+      "TimeToNotify": "@immediately"
+    },
+    {
+      "Name": "Channel2",
+      "Subscribers": [
+        "jimmy",
+        "bob"
+      ],
+      "Notifiers": [
+        "testnotify"
+      ],
+      "TimeToNotify": "@daily"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import "time"
 const (
 	reloadConfigInterval         = 5 * time.Minute
 	notificationDeliveryInterval = time.Minute
+	numberOfBackgroundTasks      = 2
 )
 
 func (b *SQLiteNotificationBackend) doConfigReloadLogIfError() {
@@ -20,29 +21,47 @@ func (b *SQLiteNotificationBackend) deliverNotificationLogIfError() {
 }
 
 func (b *SQLiteNotificationBackend) startConfigReloader() {
+	logger.Info("started config reloader")
+	b.startedOneTask()
 	for {
 		select {
 		case <-b.quitChannel:
-			logger.Info("shutting down config reloader")
-			return
+			goto shutdown
 		case <-time.After(reloadConfigInterval):
 			b.doConfigReloadLogIfError()
-		case <-b.forceConfigReload:
+		case _, open := <-b.forceConfigReload:
+			if !open {
+				goto shutdown
+			}
+
 			b.doConfigReloadLogIfError()
 		}
 	}
+
+shutdown:
+	logger.Info("shutting down config reloader")
+	return
 }
 
 func (b *SQLiteNotificationBackend) startNotificationDelivery() {
+	logger.Info("started notification delivery")
+	b.startedOneTask()
 	for {
 		select {
 		case <-b.quitChannel:
-			logger.Info("shutting down notification delivery")
-			return
+			goto shutdown
 		case <-time.After(notificationDeliveryInterval):
 			b.deliverNotificationLogIfError()
-		case <-b.forceNotificationDelivery:
+		case _, open := <-b.forceNotificationDelivery:
+			if !open {
+				goto shutdown
+			}
+
 			b.deliverNotificationLogIfError()
 		}
 	}
+
+shutdown:
+	logger.Info("shutting down notification delivery")
+	return
 }
