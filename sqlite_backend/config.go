@@ -31,6 +31,9 @@ func (c *Channel) IsTimeToNotifyValid() bool {
 	}
 
 	_, err := cronexpr.Parse(c.TimeToNotify)
+	if err != nil {
+		logger.WithField("time_to_notify", c.TimeToNotify).Warn("failed to parse time to notify")
+	}
 	return err == nil
 }
 
@@ -39,13 +42,25 @@ func (c *Channel) ShouldSendImmediately() bool {
 }
 
 func (c *Channel) ShouldSendNowGivenTime(currentTime time.Time) bool {
-	minuteBefore := currentTime.Add(-time.Minute)
+	// the additional -1s is to make sure that the range always had 1 second.
+	// example: if you specify 01:00:00, the minute before and minute after will
+	// be 01:00:00 and 01:01:00. The next time computed will be an hour from now
+	// (in the hourly case). This means that there's a chance that this hour we
+	// never send anything. With an additional second it minimize this risk.
+	//
+	// Also, double sending is minimized as only 1 goroutine sends and we use a
+	// delivered flag in the db.
+	minuteBefore := currentTime.Add(time.Duration(-currentTime.Second()-1) * time.Second)
+	minuteAfter := minuteBefore.Add(time.Minute + time.Second)
 	expression := cronexpr.MustParse(c.TimeToNotify)
 	nextTime := expression.Next(minuteBefore)
+	if nextTime.IsZero() {
+		return false
+	}
 
 	// Operator overloading is so good.
 	// return (minuteBefore <= nextTime <= currentTime)
-	return (nextTime.After(minuteBefore) || nextTime.Equal(minuteBefore)) && (nextTime.Before(currentTime) || nextTime.Equal(currentTime))
+	return (nextTime.After(minuteBefore) || nextTime.Equal(minuteBefore)) && (nextTime.Before(minuteAfter) || nextTime.Equal(minuteAfter))
 }
 
 type ConfigJSON struct {
