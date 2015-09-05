@@ -29,6 +29,8 @@ type SQLiteNotificationBackendSuite struct {
 	timmy        backend.Subscriber
 	bob          backend.Subscriber
 	notification backend.Notification
+	channel1     *Channel
+	channel2     *Channel
 }
 
 var _ = Suite(&SQLiteNotificationBackendSuite{})
@@ -61,6 +63,20 @@ func (s *SQLiteNotificationBackendSuite) SetUpSuite(c *C) {
 		Origin:   "origin",
 		Tags:     []string{"tag1", "tag2"},
 		Priority: backend.NormalPriority,
+	}
+
+	s.channel1 = &Channel{
+		Name:         "Channel1",
+		Subscribers:  []string{"jimmy"},
+		Notifiers:    []string{"testnotify"},
+		TimeToNotify: "@immediately",
+	}
+
+	s.channel2 = &Channel{
+		Name:         "Channel2",
+		Subscribers:  []string{"jimmy", "bob"},
+		Notifiers:    []string{"testnotify"},
+		TimeToNotify: "@daily",
 	}
 }
 
@@ -95,22 +111,8 @@ func (s *SQLiteNotificationBackendSuite) TestBackendInitialize(c *C) {
 	c.Assert(s.backend.config.Subscribers["bob"], DeepEquals, s.bob)
 
 	c.Assert(s.backend.config.Channels, HasLen, 2)
-
-	channel1 := &Channel{
-		Name:         "Channel1",
-		Subscribers:  []string{"jimmy"},
-		Notifiers:    []string{"testnotify"},
-		TimeToNotify: "@immediately",
-	}
-
-	channel2 := &Channel{
-		Name:         "Channel2",
-		Subscribers:  []string{"jimmy", "bob"},
-		Notifiers:    []string{"testnotify"},
-		TimeToNotify: "@daily",
-	}
-	c.Assert(s.backend.config.Channels["Channel1"], DeepEquals, channel1)
-	c.Assert(s.backend.config.Channels["Channel2"], DeepEquals, channel2)
+	c.Assert(s.backend.config.Channels["Channel1"], DeepEquals, s.channel1)
+	c.Assert(s.backend.config.Channels["Channel2"], DeepEquals, s.channel2)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c *C) {
@@ -209,5 +211,18 @@ func (s *SQLiteNotificationBackendSuite) TestStartsConfigReloaderAndNotification
 	c.Assert(subscribers[0], DeepEquals, s.timmy)
 }
 
-func (s *SQLiteNotificationBackendSuite) TestGetChannelsGetSubscribers(c *C) {
+func (s *SQLiteNotificationBackendSuite) TestGetChannels(c *C) {
+	channels := s.backend.GetChannels()
+	c.Assert(channels, HasLen, 2)
+
+	c.Assert(channels[0], DeepEquals, s.channel1)
+	c.Assert(channels[1], DeepEquals, s.channel2)
+}
+
+func (s *SQLiteNotificationBackendSuite) TestGetSubscribers(c *C) {
+	subscribers := s.backend.GetSubscribers()
+	c.Assert(subscribers, HasLen, 2)
+
+	c.Assert(subscribers[0], DeepEquals, s.jimmy)
+	c.Assert(subscribers[1], DeepEquals, s.bob)
 }
