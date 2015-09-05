@@ -22,3 +22,31 @@ func (s *SQLiteNotificationBackendSuite) TestConfigReloadWillBlockIfLocked(c *C)
 	c.Assert(timedout, Equals, true)
 	c.Assert(err, IsNil)
 }
+
+func (s *SQLiteNotificationBackendSuite) TestConfigReloadWillFailIfTimeToNotifyIsWrong(c *C) {
+
+}
+
+func (s *SQLiteNotificationBackendSuite) TestChannelShouldSendGivenTimeMinutely(c *C) {
+
+}
+
+func (s *SQLiteNotificationBackendSuite) TestChannelShouldSendGivenTimeHourly(c *C) {
+
+}
+
+func (s *SQLiteNotificationBackendSuite) TestChannelShouldSendGivenTimeDaily(c *C) {
+
+}
+
+func (s *SQLiteNotificationBackendSuite) TestChannelShouldSendGivenTimeWeekly(c *C) {
+
+}
+
+func (s *SQLiteNotificationBackendSuite) TestChannelShouldSendGivenTimeMonthly(c *C) {
+
+}
+
+func (s *SQLiteNotificationBackendSuite) TestChannelShouldSendGivenTimeYearly(c *C) {
+
+}

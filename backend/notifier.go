@@ -9,7 +9,7 @@ type Subscriber struct {
 
 type Notifier interface {
 	Name() string
-	Send(notification Notification, subscriber Subscriber) error
+	Send(notifications []Notification, subscriber Subscriber) error
 }
 
 var availableNotifiers map[string]Notifier = make(map[string]Notifier)

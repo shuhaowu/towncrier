@@ -14,14 +14,14 @@ func (err ChannelNotFound) Error() string {
 }
 
 type NotificationFailedtoSendToSomeSubscribers struct {
-	Errors       map[string]error // subscriber unique name to error
-	Notification *Notification
+	Errors        map[string]error // subscriber unique name to error
+	Notifications []*Notification
 }
 
-func NewNotificationFailedToSendToSubscribersError(n *Notification) *NotificationFailedtoSendToSomeSubscribers {
+func NewNotificationFailedToSendToSubscribersError(notifications []*Notification) *NotificationFailedtoSendToSomeSubscribers {
 	return &NotificationFailedtoSendToSomeSubscribers{
-		Errors:       make(map[string]error),
-		Notification: n,
+		Errors:        make(map[string]error),
+		Notifications: notifications,
 	}
 }
 
@@ -40,6 +40,15 @@ func (err *NotificationFailedtoSendToSomeSubscribers) Error() string {
 		errormsg[i] = fmt.Sprintf("%s => %v", name, e)
 		i++
 	}
+
 	msg := strings.Join(errormsg, "; ")
-	return fmt.Sprintf("failed to send notification %d: %s", err.Notification.Id, msg)
+	idsStringArray := make([]string, len(err.Notifications))
+
+	for i, n := range err.Notifications {
+		idsStringArray[i] = fmt.Sprintf("%d", n.Id)
+	}
+
+	ids := strings.Join(idsStringArray, ",")
+
+	return fmt.Sprintf("failed to send notifications %s: %s", ids, msg)
 }

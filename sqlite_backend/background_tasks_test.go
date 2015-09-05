@@ -62,4 +62,18 @@ func (s *SQLiteNotificationBackendSuite) TestDoConfigReloadLogOnError(c *C) {
 	s.backend.doConfigReloadLogIfError()
 
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 1)
+
+	channels := channelsArray(s.backend.GetChannels())
+	subscribers := subscribersArray(s.backend.GetSubscribers())
+
+	sort.Sort(channels)
+	sort.Sort(subscribers)
+
+	c.Assert(channels, HasLen, 2)
+	c.Assert(channels[0], DeepEquals, s.channel1)
+	c.Assert(channels[1], DeepEquals, s.channel2)
+
+	c.Assert(subscribers, HasLen, 2)
+	c.Assert(subscribers[0], DeepEquals, s.bob)
+	c.Assert(subscribers[1], DeepEquals, s.jimmy)
 }

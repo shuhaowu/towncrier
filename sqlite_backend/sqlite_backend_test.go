@@ -120,7 +120,8 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 	c.Assert(err, IsNil)
 
 	c.Assert(s.notifier.log, HasLen, 1)
-	c.Assert(s.notifier.log[0].notification, DeepEquals, notification)
+	c.Assert(s.notifier.log[0].notifications, HasLen, 1)
+	c.Assert(s.notifier.log[0].notifications[0], DeepEquals, notification)
 	c.Assert(s.notifier.log[0].subscriber, DeepEquals, s.jimmy)
 
 	notifications := []*Notification{}

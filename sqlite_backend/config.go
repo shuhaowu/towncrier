@@ -2,10 +2,12 @@ package sqlite_backend
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/gorhill/cronexpr"
 	"gitlab.com/shuhao/towncrier/backend"
 )
 
@@ -23,12 +25,27 @@ type Channel struct {
 	TimeToNotify string
 }
 
+func (c *Channel) IsTimeToNotifyValid() bool {
+	if c.TimeToNotify == ChannelSendImmediately {
+		return true
+	}
+
+	_, err := cronexpr.Parse(c.TimeToNotify)
+	return err == nil
+}
+
 func (c *Channel) ShouldSendImmediately() bool {
 	return c.TimeToNotify == ChannelSendImmediately
 }
 
-func (c *Channel) ShouldSendNowGivenTime(t time.Time) bool {
-	return false
+func (c *Channel) ShouldSendNowGivenTime(currentTime time.Time) bool {
+	minuteBefore := currentTime.Add(-time.Minute)
+	expression := cronexpr.MustParse(c.TimeToNotify)
+	nextTime := expression.Next(minuteBefore)
+
+	// Operator overloading is so good.
+	// return (minuteBefore <= nextTime <= currentTime)
+	return (nextTime.After(minuteBefore) || nextTime.Equal(minuteBefore)) && (nextTime.Before(currentTime) || nextTime.Equal(currentTime))
 }
 
 type ConfigJSON struct {
@@ -74,6 +91,9 @@ func (c *Config) Reload() error {
 
 	channels := make(map[string]*Channel)
 	for _, channel := range configJson.Channels {
+		if !channel.IsTimeToNotifyValid() {
+			return fmt.Errorf("channel '%s' has an invalid TimeToNotify", channel.Name)
+		}
 		channels[channel.Name] = channel
 	}
 

@@ -38,12 +38,24 @@ func (n *Notification) PostGet(s gorp.SqlExecutor) error {
 	return nil
 }
 
-func (n *Notification) save(dbmap *gorp.DbMap) error {
+func (n *Notification) insert(dbmap *gorp.DbMap) error {
 	return dbmap.Insert(n)
 }
 
-func (n *Notification) send(dbmap *gorp.DbMap, channel *Channel, subscribers []backend.Subscriber) error {
-	failedToSendError := NewNotificationFailedToSendToSubscribersError(n)
+func (n *Notification) setDelivered(dbmap *gorp.DbMap) error {
+	n.Delivered = true
+	_, err := dbmap.Update(n)
+	return err
+}
+
+func (b *SQLiteNotificationBackend) sendNotifications(notifications []*Notification, channel *Channel, subscribers []backend.Subscriber) error {
+	failedToSendError := NewNotificationFailedToSendToSubscribersError(notifications)
+
+	backendNotificationObjects := make([]backend.Notification, len(notifications))
+
+	for i, n := range notifications {
+		backendNotificationObjects[i] = n.Notification
+	}
 
 	for _, subscriber := range subscribers {
 		for _, notifierName := range channel.Notifiers {
@@ -53,7 +65,7 @@ func (n *Notification) send(dbmap *gorp.DbMap, channel *Channel, subscribers []b
 				continue
 			}
 
-			err := notifier.Send(n.Notification, subscriber)
+			err := notifier.Send(backendNotificationObjects, subscriber)
 			if err != nil {
 				logger.WithFields(logrus.Fields{
 					"error":      err,
@@ -78,15 +90,16 @@ func (n *Notification) send(dbmap *gorp.DbMap, channel *Channel, subscribers []b
 		return failedToSendError
 	}
 
-	n.Delivered = true
-	_, err := dbmap.Update(n)
-	if err != nil {
-		return err
+	var err error = nil
+	for _, n := range notifications {
+		err = n.setDelivered(b.DbMap)
+		if err != nil {
+			logger.WithFields(logrus.Fields{
+				"error":        err,
+				"notification": n.Id,
+			}).Error("failed to set notification to be delivered")
+		}
 	}
 
-	return nil
-}
-
-func (b *SQLiteNotificationBackend) sendNotificationsIfTimeIsUp() error {
-	return nil
+	return err
 }

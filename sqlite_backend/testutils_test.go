@@ -14,8 +14,8 @@ const (
 )
 
 type NotificationSubscriberCombo struct {
-	notification backend.Notification
-	subscriber   backend.Subscriber
+	notifications []backend.Notification
+	subscriber    backend.Subscriber
 }
 
 type TestNotifier struct {
@@ -38,11 +38,11 @@ func (n *TestNotifier) ShouldSendImmediately() bool {
 	return false
 }
 
-func (n *TestNotifier) Send(notification backend.Notification, subscriber backend.Subscriber) error {
+func (n *TestNotifier) Send(notifications []backend.Notification, subscriber backend.Subscriber) error {
 	n.Lock()
 	n.log = append(n.log, &NotificationSubscriberCombo{
-		notification: notification,
-		subscriber:   subscriber,
+		notifications: notifications,
+		subscriber:    subscriber,
 	})
 	n.Unlock()
 

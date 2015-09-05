@@ -82,12 +82,18 @@ func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 	return nil
 }
 
+// The algorithm of this function goes as follows:
+//
+// 1. Save it regardless of what happens.
+// 2. Check if the backend disabled sending of notifications
+// 3. Get the channel and see if it should send immediately.
+// 4. If yes, send the notification, otherwise don't.
 func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notification) error {
 	localNotification := &Notification{
 		Notification: notification,
 	}
 
-	err := localNotification.save(b.DbMap)
+	err := localNotification.insert(b.DbMap)
 	if err != nil {
 		return err
 	}
@@ -106,7 +112,7 @@ func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notif
 		return nil
 	}
 
-	return localNotification.send(b.DbMap, channel, subscribers)
+	return b.sendNotifications([]*Notification{localNotification}, channel, subscribers)
 }
 
 func (b *SQLiteNotificationBackend) Name() string {
