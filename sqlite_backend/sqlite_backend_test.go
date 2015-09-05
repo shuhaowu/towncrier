@@ -1,11 +1,8 @@
 package sqlite_backend
 
 import (
-	"sync"
+	"sort"
 	"testing"
-	"time"
-
-	"github.com/Sirupsen/logrus"
 
 	"gitlab.com/shuhao/towncrier/backend"
 	"gitlab.com/shuhao/towncrier/testhelpers"
@@ -132,6 +129,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 	c.Assert(notifications, HasLen, 1)
 
 	c.Assert(notifications[0].Notification, DeepEquals, notification)
+	c.Assert(notifications[0].Delivered, Equals, true)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediately(c *C) {
@@ -149,6 +147,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediate
 	c.Assert(notifications, HasLen, 1)
 
 	c.Assert(notifications[0].Notification, DeepEquals, notification)
+	c.Assert(notifications[0].Delivered, Equals, false)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotification(c *C) {
@@ -169,60 +168,29 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotificat
 	c.Assert(notifications, HasLen, 1)
 
 	c.Assert(notifications[0].Notification, DeepEquals, notification)
+	c.Assert(notifications[0].Delivered, Equals, false)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestName(c *C) {
 	c.Assert(s.backend.Name(), Equals, BackendName)
 }
 
-func (s *SQLiteNotificationBackendSuite) TestStartsConfigReloaderAndNotificationDelivery(c *C) {
-	wg := &sync.WaitGroup{}
-	s.backend.Start(wg)
-	s.backend.BlockUntilReady()
-	defer s.backend.Shutdown()
-
-	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 2)
-	entries := make(map[string]bool)
-
-	for _, entry := range logrusTestHook.Logs[logrus.InfoLevel] {
-		entries[entry.Message] = true
-	}
-
-	c.Assert(entries["started config reloader"], Equals, true)
-	c.Assert(entries["started notification delivery"], Equals, true)
-
-	err := changeTestConfig()
-	c.Assert(err, IsNil)
-	defer restoreTestConfig()
-
-	s.backend.ForceConfigReload()
-
-	// I'M SORRY
-	time.Sleep(500 * time.Millisecond)
-
-	channels := s.backend.GetChannels()
-	subscribers := s.backend.GetSubscribers()
-
-	c.Assert(channels, HasLen, 2)
-	c.Assert(channels[0].Name, Equals, "Channel1")
-	c.Assert(channels[0].Subscribers, DeepEquals, []string{"timmy"})
-
-	c.Assert(subscribers, HasLen, 2)
-	c.Assert(subscribers[0], DeepEquals, s.timmy)
-}
-
 func (s *SQLiteNotificationBackendSuite) TestGetChannels(c *C) {
-	channels := s.backend.GetChannels()
+	channels := channelsArray(s.backend.GetChannels())
 	c.Assert(channels, HasLen, 2)
+
+	sort.Sort(channels)
 
 	c.Assert(channels[0], DeepEquals, s.channel1)
 	c.Assert(channels[1], DeepEquals, s.channel2)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestGetSubscribers(c *C) {
-	subscribers := s.backend.GetSubscribers()
+	subscribers := subscribersArray(s.backend.GetSubscribers())
 	c.Assert(subscribers, HasLen, 2)
 
-	c.Assert(subscribers[0], DeepEquals, s.jimmy)
-	c.Assert(subscribers[1], DeepEquals, s.bob)
+	sort.Sort(subscribers)
+
+	c.Assert(subscribers[0], DeepEquals, s.bob)
+	c.Assert(subscribers[1], DeepEquals, s.jimmy)
 }

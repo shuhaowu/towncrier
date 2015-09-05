@@ -96,8 +96,8 @@ func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notif
 		return nil
 	}
 
-	return b.conditionallySendNotification(func(channel *Channel, n backend.Notifier) bool {
-		return n.ShouldSendImmediately() || channel.ShouldSendImmediately()
+	return b.conditionallySendNotification(func(channel *Channel) bool {
+		return channel.ShouldSendImmediately()
 	}, localNotification)
 }
 

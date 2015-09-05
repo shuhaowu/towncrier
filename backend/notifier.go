@@ -9,7 +9,6 @@ type Subscriber struct {
 
 type Notifier interface {
 	Name() string
-	ShouldSendImmediately() bool
 	Send(notification Notification, subscriber Subscriber) error
 }
 

@@ -11,6 +11,7 @@ type Notification struct {
 	Id          int64 `db:"id"`
 	TagsString  string
 	PriorityInt int64
+	Delivered   bool
 	backend.Notification
 }
 
@@ -39,7 +40,7 @@ func (b *SQLiteNotificationBackend) saveNotification(notification *Notification)
 	return b.Insert(notification)
 }
 
-func (b *SQLiteNotificationBackend) conditionallySendNotification(shouldSend func(*Channel, backend.Notifier) bool, notification *Notification) error {
+func (b *SQLiteNotificationBackend) conditionallySendNotification(shouldSend func(*Channel) bool, notification *Notification) error {
 	// We need to lock here because we want to make sure that when we do send
 	// a notification, we are not in the middle of a reload for configuration
 	// and try to send to the wrong subscriber.
@@ -54,6 +55,10 @@ func (b *SQLiteNotificationBackend) conditionallySendNotification(shouldSend fun
 
 	if !found {
 		return ChannelNotFound{ChannelName: notification.Channel}
+	}
+
+	if !shouldSend(channel) {
+		return nil
 	}
 
 	failedToSendError := NewNotificationFailedToSendToSubscribersError(notification)
@@ -72,12 +77,10 @@ func (b *SQLiteNotificationBackend) conditionallySendNotification(shouldSend fun
 				continue
 			}
 
-			if shouldSend(channel, notifier) {
-				err := notifier.Send(notification.Notification, subscriber)
-				if err != nil {
-					logger.Errorf("failed to send notification to subscriber '%s' via '%s'", subscriberName, notifierName)
-					failedToSendError.AddError(subscriberName, err)
-				}
+			err := notifier.Send(notification.Notification, subscriber)
+			if err != nil {
+				logger.Errorf("failed to send notification to subscriber '%s' via '%s'", subscriberName, notifierName)
+				failedToSendError.AddError(subscriberName, err)
 			}
 		}
 	}
@@ -93,6 +96,12 @@ func (b *SQLiteNotificationBackend) conditionallySendNotification(shouldSend fun
 	// TODO: fix.
 	if failedToSendError.HasError() {
 		return failedToSendError
+	}
+
+	notification.Delivered = true
+	_, err := b.Update(notification)
+	if err != nil {
+		return err
 	}
 
 	return nil

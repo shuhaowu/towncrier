@@ -2,6 +2,7 @@ package sqlite_backend
 
 import (
 	"io/ioutil"
+	"strings"
 	"sync"
 
 	"gitlab.com/shuhao/towncrier/backend"
@@ -50,9 +51,14 @@ func (n *TestNotifier) Send(notification backend.Notification, subscriber backen
 
 var originalTestConfigContent []byte = nil
 
-func changeTestConfig() error {
+func memorizeOriginalConfig() error {
 	var err error
 	originalTestConfigContent, err = ioutil.ReadFile(standardTestConfigPath)
+	return err
+}
+
+func changeTestConfig() error {
+	err := memorizeOriginalConfig()
 	if err != nil {
 		return err
 	}
@@ -71,4 +77,33 @@ func restoreTestConfig() error {
 	}
 
 	return ioutil.WriteFile(standardTestConfigPath, originalTestConfigContent, 0644)
+}
+
+// Because Go doesn't really have generics
+type channelsArray []*Channel
+
+func (a channelsArray) Len() int {
+	return len(a)
+}
+
+func (a channelsArray) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a channelsArray) Less(i, j int) bool {
+	return strings.Compare(a[i].Name, a[j].Name) == -1
+}
+
+type subscribersArray []backend.Subscriber
+
+func (a subscribersArray) Len() int {
+	return len(a)
+}
+
+func (a subscribersArray) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a subscribersArray) Less(i, j int) bool {
+	return strings.Compare(a[i].UniqueName, a[j].UniqueName) == -1
 }

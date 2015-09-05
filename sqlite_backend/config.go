@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"time"
 
 	"gitlab.com/shuhao/towncrier/backend"
 )
@@ -24,6 +25,10 @@ type Channel struct {
 
 func (c *Channel) ShouldSendImmediately() bool {
 	return c.TimeToNotify == ChannelSendImmediately
+}
+
+func (c *Channel) ShouldSendNowGivenTime(t time.Time) bool {
+	return false
 }
 
 type ConfigJSON struct {
