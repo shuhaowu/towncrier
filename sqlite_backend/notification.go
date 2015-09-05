@@ -3,6 +3,8 @@ package sqlite_backend
 import (
 	"strings"
 
+	"github.com/Sirupsen/logrus"
+
 	"gitlab.com/shuhao/towncrier/backend"
 	"gopkg.in/gorp.v1"
 )
@@ -36,51 +38,29 @@ func (n *Notification) PostGet(s gorp.SqlExecutor) error {
 	return nil
 }
 
-func (b *SQLiteNotificationBackend) saveNotification(notification *Notification) error {
-	return b.Insert(notification)
+func (n *Notification) save(dbmap *gorp.DbMap) error {
+	return dbmap.Insert(n)
 }
 
-func (b *SQLiteNotificationBackend) conditionallySendNotification(shouldSend func(*Channel) bool, notification *Notification) error {
-	// We need to lock here because we want to make sure that when we do send
-	// a notification, we are not in the middle of a reload for configuration
-	// and try to send to the wrong subscriber.
-	//
-	// Basically, always ensure that we are using one version of the config,
-	// not two half copies.
-	// Stupid.
-	b.config.Lock()
-	channel, found := b.config.Channels[notification.Channel]
-	subscribers := b.config.Subscribers
-	b.config.Unlock()
+func (n *Notification) send(dbmap *gorp.DbMap, channel *Channel, subscribers []backend.Subscriber) error {
+	failedToSendError := NewNotificationFailedToSendToSubscribersError(n)
 
-	if !found {
-		return ChannelNotFound{ChannelName: notification.Channel}
-	}
-
-	if !shouldSend(channel) {
-		return nil
-	}
-
-	failedToSendError := NewNotificationFailedToSendToSubscribersError(notification)
-
-	for _, subscriberName := range channel.Subscribers {
-		subscriber, found := subscribers[subscriberName]
-		if !found {
-			logger.Warnf("cannot send notification to subscriber %s: not found", subscriberName)
-			continue
-		}
-
+	for _, subscriber := range subscribers {
 		for _, notifierName := range channel.Notifiers {
 			notifier := backend.GetNotifier(notifierName)
 			if notifier == nil {
-				logger.Warnf("cannot find notifier %s", notifierName)
+				logger.WithField("notifier", notifierName).Warnf("cannot find notifier")
 				continue
 			}
 
-			err := notifier.Send(notification.Notification, subscriber)
+			err := notifier.Send(n.Notification, subscriber)
 			if err != nil {
-				logger.Errorf("failed to send notification to subscriber '%s' via '%s'", subscriberName, notifierName)
-				failedToSendError.AddError(subscriberName, err)
+				logger.WithFields(logrus.Fields{
+					"error":      err,
+					"subscriber": subscriber.UniqueName,
+					"notifier":   notifierName,
+				}).Errorf("failed to send notification")
+				failedToSendError.AddError(subscriber.UniqueName, err)
 			}
 		}
 	}
@@ -98,8 +78,8 @@ func (b *SQLiteNotificationBackend) conditionallySendNotification(shouldSend fun
 		return failedToSendError
 	}
 
-	notification.Delivered = true
-	_, err := b.Update(notification)
+	n.Delivered = true
+	_, err := dbmap.Update(n)
 	if err != nil {
 		return err
 	}

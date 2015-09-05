@@ -17,7 +17,6 @@ func (b *SQLiteNotificationBackend) doConfigReloadLogIfError() {
 }
 
 func (b *SQLiteNotificationBackend) deliverNotificationLogIfError() {
-
 }
 
 func (b *SQLiteNotificationBackend) startConfigReloader() {

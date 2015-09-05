@@ -87,7 +87,7 @@ func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notif
 		Notification: notification,
 	}
 
-	err := b.saveNotification(localNotification)
+	err := localNotification.save(b.DbMap)
 	if err != nil {
 		return err
 	}
@@ -96,9 +96,17 @@ func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notif
 		return nil
 	}
 
-	return b.conditionallySendNotification(func(channel *Channel) bool {
-		return channel.ShouldSendImmediately()
-	}, localNotification)
+	channel, subscribers := b.GetChannelAndItsSubscribers(notification.Channel)
+
+	if channel == nil {
+		return ChannelNotFound{ChannelName: notification.Channel}
+	}
+
+	if !channel.ShouldSendImmediately() {
+		return nil
+	}
+
+	return localNotification.send(b.DbMap, channel, subscribers)
 }
 
 func (b *SQLiteNotificationBackend) Name() string {
@@ -166,6 +174,42 @@ func (b *SQLiteNotificationBackend) ForceConfigReload() {
 
 func (b *SQLiteNotificationBackend) ForceNotificationDelivery() {
 	b.forceNotificationDelivery <- struct{}{}
+}
+
+// Gets the channel and its subscribers.
+//
+// This function guarentees that both channels and subscribers are from one
+// version of the config, but it does not guarentee that this happens.
+func (b *SQLiteNotificationBackend) GetChannelAndItsSubscribers(channelName string) (*Channel, []backend.Subscriber) {
+	// We need to lock here because we want to make sure that when we do send
+	// a notification, we are not in the middle of a reload for configuration
+	// and try to send to the wrong subscriber.
+	//
+	// Basically, always ensure that we are using one version of the config,
+	// not two half copies.
+	// Stupid.
+	b.config.Lock()
+	channel, found := b.config.Channels[channelName]
+	subscribers := b.config.Subscribers
+	b.config.Unlock()
+
+	if !found {
+		return nil, nil
+	}
+
+	channelSubscribers := make([]backend.Subscriber, 0)
+
+	for _, subscriberName := range channel.Subscribers {
+		subscriber, found := subscribers[subscriberName]
+		if !found {
+			logger.WithField("subscriber", subscriberName).Warnf("subscriber not found")
+			continue
+		}
+
+		channelSubscribers = append(channelSubscribers, subscriber)
+	}
+
+	return channel, channelSubscribers
 }
 
 func (b *SQLiteNotificationBackend) GetSubscribers() []backend.Subscriber {
