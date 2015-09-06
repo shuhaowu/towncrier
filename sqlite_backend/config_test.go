@@ -1,6 +1,8 @@
 package sqlite_backend
 
 import (
+	"bytes"
+	"io/ioutil"
 	"time"
 
 	. "gopkg.in/check.v1"
@@ -24,7 +26,18 @@ func (s *SQLiteNotificationBackendSuite) TestConfigReloadWillBlockIfLocked(c *C)
 }
 
 func (s *SQLiteNotificationBackendSuite) TestConfigReloadWillFailIfTimeToNotifyIsWrong(c *C) {
+	err := memorizeOriginalConfig()
+	c.Assert(err, IsNil)
 
+	modifiedConfig := bytes.Replace(originalTestConfigContent, []byte(ChannelSendImmediately), []byte("meh"), -1)
+
+	err = ioutil.WriteFile(standardTestConfigPath, modifiedConfig, 0644)
+	c.Assert(err, IsNil)
+	defer restoreTestConfig()
+
+	err = s.backend.config.Reload()
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "channel 'Channel1' has an invalid TimeToNotify")
 }
 
 func (s *SQLiteNotificationBackendSuite) TestChannelShouldSendGivenTimeMinutely(c *C) {
