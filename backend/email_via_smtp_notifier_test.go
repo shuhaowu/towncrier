@@ -75,7 +75,7 @@ func (s *EmailViaSMTPNotifierSuite) SetUpTest(c *C) {
 }
 
 func (s *EmailViaSMTPNotifierSuite) TestSendOne(c *C) {
-	err := s.gmailNotifier.SendOne(s.notification, s.jimmy)
+	err := s.gmailNotifier.Send([]Notification{s.notification}, s.jimmy)
 	c.Assert(err, IsNil)
 
 	expectedEmailBody := s.gmailNotifier.convertTextToCRLF(`
@@ -96,5 +96,30 @@ Created At: 2015-09-05T00:15:00Z
 }
 
 func (s *EmailViaSMTPNotifierSuite) TestSendMany(c *C) {
+	err := s.gmailNotifier.Send([]Notification{s.notification, s.notification}, s.jimmy)
+	c.Assert(err, IsNil)
 
+	expectedEmailBody := s.gmailNotifier.convertTextToCRLF(`
+From: testnotifier@example.com
+To: jimmy@the.cat
+Subject: [channel] Received 2 notifications
+
+# [origin] subject #
+
+content abc
+
+Created At: 2015-09-05T00:15:00Z
+
+# [origin] subject #
+
+content abc
+
+Created At: 2015-09-05T00:15:00Z
+`) + "\r\n"
+
+	c.Assert(s.sendMailLogs, HasLen, 1)
+	c.Assert(s.sendMailLogs[0].from, Equals, testSelfEmail)
+	c.Assert(s.sendMailLogs[0].to, DeepEquals, []string{s.jimmy.Email})
+	c.Assert(s.sendMailLogs[0].addr, Equals, "smtp.gmail.com:587")
+	c.Assert(string(s.sendMailLogs[0].body), Equals, expectedEmailBody)
 }

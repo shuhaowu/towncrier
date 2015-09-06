@@ -98,9 +98,12 @@ func (n *EmailViaSMTPNotifier) Name() string {
 func (n *EmailViaSMTPNotifier) Send(notifications []Notification, subscriber Subscriber) error {
 	if len(notifications) == 1 {
 		return n.SendOne(notifications[0], subscriber)
-	} else {
+	} else if len(notifications) > 1 {
 		return n.SendMany(notifications, subscriber)
 	}
+
+	// We don't care about the case when no notification is sent.
+	return nil
 }
 
 func (n *EmailViaSMTPNotifier) convertTextToCRLF(text string) string {
@@ -119,7 +122,7 @@ func (n *EmailViaSMTPNotifier) SendOne(notification Notification, subscriber Sub
 		From:    n.SelfEmailAddr,
 		To:      subscriber.Email,
 		Subject: fmt.Sprintf("[%s][%s] %s", notification.Channel, notification.Origin, notification.Subject),
-		Body:    fmt.Sprintf("%s\r\n\r\nCreated At: %s", nData.Content, nData.Timestamp),
+		Body:    n.convertTextToCRLF(fmt.Sprintf("%s\r\n\r\nCreated At: %s", nData.Content, nData.Timestamp)),
 	}
 	return n.sendMail(data)
 }
@@ -138,9 +141,14 @@ func (n *EmailViaSMTPNotifier) SendMany(notifications []Notification, subscriber
 		if err != nil {
 			return err
 		}
+		// We want an extra line in this email.
+		_, err = emailBodyBuf.WriteString("\r\n")
+		if err != nil {
+			return err
+		}
 	}
 
-	data.Body = emailBodyBuf.String()
+	data.Body = n.convertTextToCRLF(emailBodyBuf.String())
 	return n.sendMail(data)
 }
 
