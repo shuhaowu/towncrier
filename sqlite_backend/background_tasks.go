@@ -46,6 +46,10 @@ func (b *SQLiteNotificationBackend) deliverNotificationsLogIfError() {
 			return
 		}
 
+		if len(notifications) == 0 {
+			continue
+		}
+
 		c, subscribers := b.GetChannelAndItsSubscribers(channel.Name)
 		if c == nil {
 			localLog.Warnf("channel disappeared during sending, ignoring")
