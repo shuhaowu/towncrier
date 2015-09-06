@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"bitbucket.org/liamstask/goose/lib/goose"
 	"gopkg.in/gorp.v1"
@@ -33,5 +34,18 @@ func ResetTestDatabase(dbmap *gorp.DbMap) {
 	err = goose.RunMigrationsOnDb(conf, conf.MigrationsDir, target, dbmap.Db)
 	if err != nil {
 		panic(fmt.Sprintf("cannot run migration with goose: %v\n", err))
+	}
+}
+
+func BlockUntilSatisfiedOrTimeout(condition func() bool, timeout time.Duration) bool {
+	for {
+		select {
+		case <-time.After(20 * time.Millisecond):
+			if condition() {
+				return false
+			}
+		case <-time.After(timeout):
+			return true
+		}
 	}
 }

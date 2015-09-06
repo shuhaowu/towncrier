@@ -6,10 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/shuhao/towncrier/testhelpers"
+
 	"github.com/Sirupsen/logrus"
 
 	. "gopkg.in/check.v1"
 )
+
+const testBackgroundTaskTimeout = 5 * time.Second
 
 func (s *SQLiteNotificationBackendSuite) TestStartsConfigReloaderAndNotificationDelivery(c *C) {
 	wg := &sync.WaitGroup{}
@@ -78,10 +82,90 @@ func (s *SQLiteNotificationBackendSuite) TestDoConfigReloadLogOnError(c *C) {
 	c.Assert(subscribers[1], DeepEquals, s.jimmy)
 }
 
-func (s *SQLiteNotificationBackendSuite) TestDeliverNotifications(c *C) {
+func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsWillNotWithoutNotifications(c *C) {
+	currentTime, err := time.Parse(time.RFC3339, "2015-09-05T23:59:59Z")
+	c.Assert(err, IsNil)
+	s.backend.deliverNotificationsLogIfError(currentTime)
 
+	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
+	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "attempting to deliver notifications")
+
+	notification := &Notification{
+		Notification: s.notification,
+		Delivered:    true,
+	}
+	notification.Channel = "Channel2"
+
+	err = notification.insert(s.backend.DbMap)
+	c.Assert(err, IsNil)
+
+	logrusTestHook.ClearLogs()
+	s.backend.deliverNotificationsLogIfError(currentTime)
+	// Since we use asynchronous sending. In case it sent we want to catch it.
+	time.Sleep(200 * time.Millisecond)
+
+	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
+	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "attempting to deliver notifications")
+
+	notification.Delivered = false
+	_, err = s.backend.Update(notification)
+	c.Assert(err, IsNil)
+
+	logrusTestHook.ClearLogs()
+	currentTime, err = time.Parse(time.RFC3339, "2015-09-05T23:55:59Z")
+	c.Assert(err, IsNil)
+
+	s.backend.deliverNotificationsLogIfError(currentTime)
+	// Since we use asynchronous sending. In case it sent we want to catch it.
+	time.Sleep(200 * time.Millisecond)
+
+	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
+	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "attempting to deliver notifications")
 }
 
-func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsFailedWillNotRecordDelivered(c *C) {
+func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsDelivers(c *C) {
+	notification := s.notification
+	notification.Channel = "Channel2"
 
+	localNotification := &Notification{
+		Notification: notification,
+		Delivered:    false,
+	}
+
+	localNotification2 := &Notification{
+		Notification: notification,
+		Delivered:    true,
+	}
+
+	err := s.backend.DbMap.Insert(localNotification, localNotification2)
+	c.Assert(err, IsNil)
+
+	currentTime, err := time.Parse(time.RFC3339, "2015-09-05T23:59:59Z")
+	c.Assert(err, IsNil)
+	s.backend.deliverNotificationsLogIfError(currentTime)
+
+	timedout := testhelpers.BlockUntilSatisfiedOrTimeout(func() bool {
+		return len(s.notifier.log) >= 2
+	}, testBackgroundTaskTimeout)
+
+	c.Assert(timedout, Equals, false)
+
+	c.Assert(s.notifier.log, HasLen, 2)
+	c.Assert(s.notifier.log[0].notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.log[0].notifications[0], notification)
+
+	c.Assert(s.notifier.log[1].notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.log[1].notifications[0], notification)
+
+	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
+	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
 }

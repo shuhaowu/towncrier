@@ -2,6 +2,7 @@ package sqlite_backend
 
 import (
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 
@@ -24,11 +25,14 @@ func (n *Notification) predatabaseOp() {
 
 func (n *Notification) PreInsert(s gorp.SqlExecutor) error {
 	n.predatabaseOp()
+	n.CreatedAt = time.Now().UnixNano()
+	n.UpdatedAt = n.CreatedAt
 	return nil
 }
 
 func (n *Notification) PreUpdate(s gorp.SqlExecutor) error {
 	n.predatabaseOp()
+	n.UpdatedAt = time.Now().UnixNano()
 	return nil
 }
 

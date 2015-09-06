@@ -26,11 +26,11 @@ func (b *SQLiteNotificationBackend) doConfigReloadLogIfError() {
 // 2. If yes, get the list of notifications that's unsent
 // 3. Send each notifications
 //
-func (b *SQLiteNotificationBackend) deliverNotificationsLogIfError() {
+func (b *SQLiteNotificationBackend) deliverNotificationsLogIfError(currentTime time.Time) {
+	logger.Info("attempting to deliver notifications")
 
 	// No need to lock as we only access one thing
 	channels := b.config.Channels
-	currentTime := time.Now()
 
 	for _, channel := range channels {
 		if !channel.ShouldSendNowGivenTime(currentTime) {
@@ -49,6 +49,8 @@ func (b *SQLiteNotificationBackend) deliverNotificationsLogIfError() {
 		if len(notifications) == 0 {
 			continue
 		}
+
+		localLog.Infof("found %d notifications to deliver to %d subscribers", len(notifications), len(channel.Subscribers))
 
 		c, subscribers := b.GetChannelAndItsSubscribers(channel.Name)
 		if c == nil {
@@ -94,18 +96,24 @@ shutdown:
 func (b *SQLiteNotificationBackend) startNotificationDelivery() {
 	logger.Info("started notification delivery")
 	b.startedOneTask()
+
+	if b.NeverSendNotifications {
+		logger.Info("we should never send notifications, shutting down...")
+		goto shutdown
+	}
+
 	for {
 		select {
 		case <-b.quitChannel:
 			goto shutdown
 		case <-time.After(notificationDeliveryInterval):
-			b.deliverNotificationsLogIfError()
+			b.deliverNotificationsLogIfError(time.Now())
 		case _, open := <-b.forceNotificationDelivery:
 			if !open {
 				goto shutdown
 			}
 
-			b.deliverNotificationsLogIfError()
+			b.deliverNotificationsLogIfError(time.Now())
 		}
 	}
 

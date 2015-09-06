@@ -37,3 +37,13 @@ func (h *LogrusTestHook) Levels() []logrus.Level {
 func (h *LogrusTestHook) ClearLogs() {
 	h.Logs = make(map[logrus.Level][]*logrus.Entry, len(h.Levels()))
 }
+
+func (h *LogrusTestHook) HasMessage(level logrus.Level, message string) bool {
+	for _, entry := range h.Logs[level] {
+		if entry.Message == message {
+			return true
+		}
+	}
+
+	return false
+}

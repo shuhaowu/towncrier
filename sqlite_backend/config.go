@@ -42,6 +42,11 @@ func (c *Channel) ShouldSendImmediately() bool {
 }
 
 func (c *Channel) ShouldSendNowGivenTime(currentTime time.Time) bool {
+	// We assume these are already sent
+	if c.TimeToNotify == "@immediately" {
+		return false
+	}
+
 	// the additional -1s is to make sure that the range always had 1 second.
 	// example: if you specify 01:00:00, the minute before and minute after will
 	// be 01:00:00 and 01:01:00. The next time computed will be an hour from now

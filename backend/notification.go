@@ -15,10 +15,12 @@ var PriorityMap map[string]Priority = map[string]Priority{
 }
 
 type Notification struct {
-	Subject  string
-	Content  string
-	Channel  string
-	Origin   string
-	Tags     []string
-	Priority Priority
+	Subject   string
+	Content   string
+	Channel   string
+	Origin    string
+	Tags      []string
+	Priority  Priority
+	CreatedAt int64 // UnixNano
+	UpdatedAt int64 // UnixNano
 }

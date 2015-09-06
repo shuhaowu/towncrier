@@ -121,7 +121,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 
 	c.Assert(s.notifier.log, HasLen, 1)
 	c.Assert(s.notifier.log[0].notifications, HasLen, 1)
-	c.Assert(s.notifier.log[0].notifications[0], DeepEquals, notification)
+	s.checkNotificationEquality(c, s.notifier.log[0].notifications[0], notification)
 	c.Assert(s.notifier.log[0].subscriber, DeepEquals, s.jimmy)
 
 	notifications := []*Notification{}
@@ -129,7 +129,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 	c.Assert(err, IsNil)
 	c.Assert(notifications, HasLen, 1)
 
-	c.Assert(notifications[0].Notification, DeepEquals, notification)
+	s.checkNotificationEquality(c, notifications[0].Notification, notification)
 	c.Assert(notifications[0].Delivered, Equals, true)
 }
 
@@ -147,7 +147,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediate
 	c.Assert(err, IsNil)
 	c.Assert(notifications, HasLen, 1)
 
-	c.Assert(notifications[0].Notification, DeepEquals, notification)
+	s.checkNotificationEquality(c, notifications[0].Notification, notification)
 	c.Assert(notifications[0].Delivered, Equals, false)
 }
 
@@ -168,7 +168,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotificat
 	c.Assert(err, IsNil)
 	c.Assert(notifications, HasLen, 1)
 
-	c.Assert(notifications[0].Notification, DeepEquals, notification)
+	s.checkNotificationEquality(c, notifications[0].Notification, notification)
 	c.Assert(notifications[0].Delivered, Equals, false)
 }
 

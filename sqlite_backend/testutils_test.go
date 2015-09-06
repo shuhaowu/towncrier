@@ -6,12 +6,20 @@ import (
 	"sync"
 
 	"gitlab.com/shuhao/towncrier/backend"
+	. "gopkg.in/check.v1"
 )
 
 const (
 	standardTestConfigPath = "test_config/standard.conf.json"
 	changedTestConfigPath  = "test_config/changed.conf.json"
 )
+
+func (s *SQLiteNotificationBackendSuite) checkNotificationEquality(c *C, obtained, expected backend.Notification) {
+	obtained.CreatedAt = 0
+	obtained.UpdatedAt = 0
+
+	c.Assert(obtained, DeepEquals, expected)
+}
 
 type NotificationSubscriberCombo struct {
 	notifications []backend.Notification

@@ -10,7 +10,9 @@ CREATE TABLE notifications (
   Origin TEXT,
   TagsString TEXT,
   PriorityInt INTEGER,
-  Delivered BOOLEAN DEFAULT 0
+  Delivered BOOLEAN DEFAULT 0,
+  CreatedAt INTEGER,
+  UpdatedAt INTEGER
 );
 
 -- +goose Down
