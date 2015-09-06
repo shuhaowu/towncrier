@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"time"
 )
 
 const emailTemplateText = "From: {{.From}}\r\n" +
@@ -19,7 +20,7 @@ const singleNotificationTemplateText = `# [{{.Origin}}] {{.Subject}} #
 
 {{.Content}}
 
-
+Created At: {{.Timestamp}}
 `
 
 var emailTemplate = template.Must(template.New("email").Parse(emailTemplateText))
@@ -42,6 +43,22 @@ func (d emailTemplateData) emailBytes() ([]byte, error) {
 	}
 
 	return emailBuf.Bytes(), nil
+}
+
+type notificationData struct {
+	Origin    string
+	Subject   string
+	Content   string
+	Timestamp string
+}
+
+func newNotificationData(notification Notification) notificationData {
+	return notificationData{
+		Origin:    notification.Origin,
+		Subject:   notification.Subject,
+		Content:   notification.Content,
+		Timestamp: time.Unix(0, notification.CreatedAt).UTC().Format(time.RFC3339),
+	}
 }
 
 type EmailViaSMTPNotifier struct {
@@ -97,11 +114,12 @@ func (n *EmailViaSMTPNotifier) addr() string {
 }
 
 func (n *EmailViaSMTPNotifier) SendOne(notification Notification, subscriber Subscriber) error {
+	nData := newNotificationData(notification)
 	data := emailTemplateData{
 		From:    n.SelfEmailAddr,
 		To:      subscriber.Email,
 		Subject: fmt.Sprintf("[%s][%s] %s", notification.Channel, notification.Origin, notification.Subject),
-		Body:    notification.Content,
+		Body:    fmt.Sprintf("%s\r\n\r\nCreated At: %s", nData.Content, nData.Timestamp),
 	}
 	return n.sendMail(data)
 }
@@ -116,7 +134,7 @@ func (n *EmailViaSMTPNotifier) SendMany(notifications []Notification, subscriber
 
 	emailBodyBuf := &bytes.Buffer{}
 	for _, notification := range notifications {
-		err := singleNotificationTemplate.Execute(emailBodyBuf, notification)
+		err := singleNotificationTemplate.Execute(emailBodyBuf, newNotificationData(notification))
 		if err != nil {
 			return err
 		}

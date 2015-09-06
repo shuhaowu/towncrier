@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"gitlab.com/shuhao/towncrier/backend"
 	"gitlab.com/shuhao/towncrier/testhelpers"
 
 	"github.com/Sirupsen/logrus"
@@ -165,6 +166,17 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsDelivers(c *C) 
 
 	c.Assert(s.notifier.log[1].notifications, HasLen, 1)
 	s.checkNotificationEquality(c, s.notifier.log[1].notifications[0], notification)
+
+	subscribersMatched := 0
+	for _, subscriber := range []backend.Subscriber{s.bob, s.jimmy} {
+		for _, log := range s.notifier.log {
+			if log.subscriber.Name == subscriber.Name {
+				subscribersMatched++
+			}
+		}
+	}
+
+	c.Assert(subscribersMatched, Equals, 2)
 
 	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)

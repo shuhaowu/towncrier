@@ -133,6 +133,41 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 	c.Assert(notifications[0].Delivered, Equals, true)
 }
 
+func (s *SQLiteNotificationBackendSuite) TestQueueUrgentNotificationSendImmediately(c *C) {
+	notification := s.notification
+	notification.Channel = "Channel2"
+	notification.Priority = backend.UrgentPriority
+
+	err := s.backend.QueueNotification(notification)
+	c.Assert(err, IsNil)
+
+	c.Assert(s.notifier.log, HasLen, 2)
+	c.Assert(s.notifier.log[0].notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.log[0].notifications[0], notification)
+
+	c.Assert(s.notifier.log[1].notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.log[1].notifications[0], notification)
+
+	subscribersMatched := 0
+	for _, subscriber := range []backend.Subscriber{s.bob, s.jimmy} {
+		for _, log := range s.notifier.log {
+			if log.subscriber.Name == subscriber.Name {
+				subscribersMatched++
+			}
+		}
+	}
+
+	c.Assert(subscribersMatched, Equals, 2)
+
+	notifications := []*Notification{}
+	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)
+	c.Assert(err, IsNil)
+	c.Assert(notifications, HasLen, 1)
+
+	s.checkNotificationEquality(c, notifications[0].Notification, notification)
+	c.Assert(notifications[0].Delivered, Equals, true)
+}
+
 func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediately(c *C) {
 	notification := s.notification
 	notification.Channel = "Channel2"
