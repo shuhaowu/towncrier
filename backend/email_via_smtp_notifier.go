@@ -31,6 +31,9 @@ type EmailViaSMTPNotifier struct {
 	Port          int
 	SelfEmailAddr string
 	Authenticator smtp.Auth
+
+	// For testing...
+	sendMailFunc func(string, smtp.Auth, string, []string, []byte) error
 }
 
 func NewEmailViaSMTPNotifier(hostname string, port int, authenticator smtp.Auth, selfEmail string) *EmailViaSMTPNotifier {
@@ -39,6 +42,7 @@ func NewEmailViaSMTPNotifier(hostname string, port int, authenticator smtp.Auth,
 		Port:          port,
 		Authenticator: authenticator,
 		SelfEmailAddr: selfEmail,
+		sendMailFunc:  smtp.SendMail,
 	}
 }
 
@@ -48,6 +52,7 @@ func NewEmailViaGmailNotifier(username string, password string, selfEmail string
 		Port:          587,
 		Authenticator: smtp.PlainAuth("", username, password, "smtp.gmail.com"),
 		SelfEmailAddr: selfEmail,
+		sendMailFunc:  smtp.SendMail,
 	}
 }
 
@@ -83,7 +88,7 @@ func (n *EmailViaSMTPNotifier) SendOne(notification Notification, subscriber Sub
 		return err
 	}
 
-	return smtp.SendMail(fmt.Sprintf("%s:%d", n.Hostname, n.Port), n.Authenticator, n.SelfEmailAddr, []string{subscriber.Email}, emailBuf.Bytes())
+	return n.sendMailFunc(fmt.Sprintf("%s:%d", n.Hostname, n.Port), n.Authenticator, n.SelfEmailAddr, []string{subscriber.Email}, emailBuf.Bytes())
 }
 
 func (n *EmailViaSMTPNotifier) SendMany(notifications []Notification, subscriber Subscriber) error {
