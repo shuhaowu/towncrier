@@ -77,3 +77,11 @@ func (s *SQLiteNotificationBackendSuite) TestDoConfigReloadLogOnError(c *C) {
 	c.Assert(subscribers[0], DeepEquals, s.bob)
 	c.Assert(subscribers[1], DeepEquals, s.jimmy)
 }
+
+func (s *SQLiteNotificationBackendSuite) TestDeliverNotifications(c *C) {
+
+}
+
+func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsFailedWillNotRecordDelivered(c *C) {
+
+}

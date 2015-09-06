@@ -108,7 +108,7 @@ func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notif
 		return ChannelNotFound{ChannelName: notification.Channel}
 	}
 
-	if !channel.ShouldSendImmediately() {
+	if !channel.ShouldSendImmediately() && notification.Priority != backend.UrgentPriority {
 		return nil
 	}
 

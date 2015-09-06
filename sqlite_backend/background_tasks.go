@@ -3,7 +3,7 @@ package sqlite_backend
 import (
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"gitlab.com/shuhao/towncrier/backend"
 )
 
 const (
@@ -26,7 +26,8 @@ func (b *SQLiteNotificationBackend) doConfigReloadLogIfError() {
 // 2. If yes, get the list of notifications that's unsent
 // 3. Send each notifications
 //
-func (b *SQLiteNotificationBackend) deliverNotificationLogIfError() {
+func (b *SQLiteNotificationBackend) deliverNotificationsLogIfError() {
+
 	// No need to lock as we only access one thing
 	channels := b.config.Channels
 	currentTime := time.Now()
@@ -36,26 +37,30 @@ func (b *SQLiteNotificationBackend) deliverNotificationLogIfError() {
 			continue
 		}
 
+		localLog := logger.WithField("channel", channel.Name)
+
 		var notifications []*Notification
 		_, err := b.Select(&notifications, "SELECT * FROM notifications WHERE Delivered = 0 AND Channel = ?", channel.Name)
 		if err != nil {
-			logger.WithField("error", err).Error("cannot select notifications from the database")
+			localLog.WithField("error", err).Error("cannot select notifications from the database")
 			return
 		}
 
 		c, subscribers := b.GetChannelAndItsSubscribers(channel.Name)
 		if c == nil {
-			logger.WithField("channel", channel.Name).Warnf("channel disappeared during sending, ignoring")
+			localLog.Warnf("channel disappeared during sending, ignoring")
 			continue
 		}
 
-		err = b.sendNotifications(notifications, c, subscribers)
-		if err != nil {
-			logger.WithFields(logrus.Fields{
-				"error":   err,
-				"channel": c.Name,
-			}).Error("failed to send notification")
-		}
+		// We need this to be parallel as things can block and be really slow.
+		go func(notifications []*Notification, channel *Channel, subscribers []backend.Subscriber) {
+			err := b.sendNotifications(notifications, channel, subscribers)
+			if err != nil {
+				localLog.WithField("error", err).Error("failed to send notification")
+			}
+
+			localLog.Info("notifications successfully sent")
+		}(notifications, c, subscribers)
 	}
 }
 
@@ -90,13 +95,13 @@ func (b *SQLiteNotificationBackend) startNotificationDelivery() {
 		case <-b.quitChannel:
 			goto shutdown
 		case <-time.After(notificationDeliveryInterval):
-			b.deliverNotificationLogIfError()
+			b.deliverNotificationsLogIfError()
 		case _, open := <-b.forceNotificationDelivery:
 			if !open {
 				goto shutdown
 			}
 
-			b.deliverNotificationLogIfError()
+			b.deliverNotificationsLogIfError()
 		}
 	}
 
