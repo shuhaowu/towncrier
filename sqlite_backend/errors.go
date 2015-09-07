@@ -5,14 +5,6 @@ import (
 	"strings"
 )
 
-type ChannelNotFound struct {
-	ChannelName string
-}
-
-func (err ChannelNotFound) Error() string {
-	return fmt.Sprintf("channel '%s' not found", err.ChannelName)
-}
-
 type NotificationFailedtoSendToSomeSubscribers struct {
 	Errors        map[string]error // subscriber unique name to error
 	Notifications []*Notification

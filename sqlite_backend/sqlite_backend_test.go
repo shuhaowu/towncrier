@@ -207,6 +207,22 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotificat
 	c.Assert(notifications[0].Delivered, Equals, false)
 }
 
+func (s *SQLiteNotificationBackendSuite) TestQueueNotificationWithInvalidChannelWillNotSave(c *C) {
+	notification := s.notification
+	notification.Channel = "invalid-channel"
+
+	err := s.backend.QueueNotification(notification)
+	c.Assert(err, NotNil)
+	channelNotFoundErr, ok := err.(backend.ChannelNotFound)
+	c.Assert(ok, Equals, true)
+	c.Assert(channelNotFoundErr.ChannelName, Equals, "invalid-channel")
+
+	notifications := []*Notification{}
+	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)
+	c.Assert(err, IsNil)
+	c.Assert(notifications, HasLen, 0)
+}
+
 func (s *SQLiteNotificationBackendSuite) TestName(c *C) {
 	c.Assert(s.backend.Name(), Equals, BackendName)
 }

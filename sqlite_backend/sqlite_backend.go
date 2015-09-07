@@ -35,7 +35,7 @@ type SQLiteNotificationBackend struct {
 }
 
 var realLogger = logrus.New()
-var logger = realLogger.WithField("backend", BackendName)
+var logger = realLogger.WithField("component", "sqlite_backend")
 
 func init() {
 	notificationBackend := &SQLiteNotificationBackend{
@@ -84,13 +84,20 @@ func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 
 // The algorithm of this function goes as follows:
 //
+// 0. Ensure the channel exists
 // 1. Save it regardless of what happens.
 // 2. Check if the backend disabled sending of notifications
-// 3. Get the channel and see if it should send immediately.
+// 3. See if the channel should send immediately.
 // 4. If yes, send the notification, otherwise don't.
 func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notification) error {
 	localNotification := &Notification{
 		Notification: notification,
+	}
+
+	channel, subscribers := b.GetChannelAndItsSubscribers(notification.Channel)
+
+	if channel == nil {
+		return backend.ChannelNotFound{ChannelName: notification.Channel}
 	}
 
 	err := localNotification.insert(b.DbMap)
@@ -100,12 +107,6 @@ func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notif
 
 	if b.NeverSendNotifications {
 		return nil
-	}
-
-	channel, subscribers := b.GetChannelAndItsSubscribers(notification.Channel)
-
-	if channel == nil {
-		return ChannelNotFound{ChannelName: notification.Channel}
 	}
 
 	if !channel.ShouldSendImmediately() && notification.Priority != backend.UrgentPriority {
