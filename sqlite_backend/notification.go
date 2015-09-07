@@ -19,7 +19,12 @@ type Notification struct {
 }
 
 func (n *Notification) predatabaseOp() {
-	n.TagsString = strings.Join(n.Tags, ",")
+	if n.Tags == nil || len(n.Tags) == 0 {
+		n.TagsString = ""
+	} else {
+		n.TagsString = strings.Join(n.Tags, ",")
+	}
+
 	n.PriorityInt = int64(n.Priority)
 }
 
