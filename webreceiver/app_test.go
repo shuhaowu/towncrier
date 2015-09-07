@@ -49,6 +49,8 @@ func (s *WebReceiverAppSuite) SetUpTest(c *C) {
 	err := s.backend.Initialize(":memory:,../sqlite_backend/test_config/standard.conf.json")
 	c.Assert(err, IsNil)
 
+	// TODO: start the backend
+
 	testhelpers.ResetTestDatabase(s.backend.DbMap)
 
 	s.app = NewApp(s.backend, s.config)
