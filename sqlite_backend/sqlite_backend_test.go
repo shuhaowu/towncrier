@@ -20,7 +20,7 @@ func Test(t *testing.T) {
 
 type SQLiteNotificationBackendSuite struct {
 	backend  *SQLiteNotificationBackend
-	notifier *TestNotifier
+	notifier *testhelpers.TestNotifier
 
 	jimmy        backend.Subscriber
 	timmy        backend.Subscriber
@@ -88,7 +88,7 @@ func (s *SQLiteNotificationBackendSuite) SetUpTest(c *C) {
 
 	testhelpers.ResetTestDatabase(s.backend.DbMap)
 
-	s.notifier = newTestNotifier()
+	s.notifier = testhelpers.NewTestNotifier()
 	backend.ClearAllNotifiers()
 	backend.RegisterNotifier(s.notifier)
 }
@@ -119,10 +119,10 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
 
-	c.Assert(s.notifier.log, HasLen, 1)
-	c.Assert(s.notifier.log[0].notifications, HasLen, 1)
-	s.checkNotificationEquality(c, s.notifier.log[0].notifications[0], notification)
-	c.Assert(s.notifier.log[0].subscriber, DeepEquals, s.jimmy)
+	c.Assert(s.notifier.Logs, HasLen, 1)
+	c.Assert(s.notifier.Logs[0].Notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.Logs[0].Notifications[0], notification)
+	c.Assert(s.notifier.Logs[0].Subscriber, DeepEquals, s.jimmy)
 
 	notifications := []*Notification{}
 	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)
@@ -141,17 +141,17 @@ func (s *SQLiteNotificationBackendSuite) TestQueueUrgentNotificationSendImmediat
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
 
-	c.Assert(s.notifier.log, HasLen, 2)
-	c.Assert(s.notifier.log[0].notifications, HasLen, 1)
-	s.checkNotificationEquality(c, s.notifier.log[0].notifications[0], notification)
+	c.Assert(s.notifier.Logs, HasLen, 2)
+	c.Assert(s.notifier.Logs[0].Notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.Logs[0].Notifications[0], notification)
 
-	c.Assert(s.notifier.log[1].notifications, HasLen, 1)
-	s.checkNotificationEquality(c, s.notifier.log[1].notifications[0], notification)
+	c.Assert(s.notifier.Logs[1].Notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.Logs[1].Notifications[0], notification)
 
 	subscribersMatched := 0
 	for _, subscriber := range []backend.Subscriber{s.bob, s.jimmy} {
-		for _, log := range s.notifier.log {
-			if log.subscriber.Name == subscriber.Name {
+		for _, log := range s.notifier.Logs {
+			if log.Subscriber.Name == subscriber.Name {
 				subscribersMatched++
 			}
 		}
@@ -175,7 +175,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediate
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
 
-	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(s.notifier.Logs, HasLen, 0)
 
 	notifications := []*Notification{}
 	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)
@@ -196,7 +196,7 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotificat
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
 
-	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(s.notifier.Logs, HasLen, 0)
 
 	notifications := []*Notification{}
 	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", notification.Channel)

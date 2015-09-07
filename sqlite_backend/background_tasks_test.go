@@ -88,7 +88,7 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsWillNotWithoutN
 	c.Assert(err, IsNil)
 	s.backend.deliverNotificationsLogIfError(currentTime)
 
-	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(s.notifier.Logs, HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
 	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
@@ -108,7 +108,7 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsWillNotWithoutN
 	// Since we use asynchronous sending. In case it sent we want to catch it.
 	time.Sleep(200 * time.Millisecond)
 
-	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(s.notifier.Logs, HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
 	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
@@ -126,7 +126,7 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsWillNotWithoutN
 	// Since we use asynchronous sending. In case it sent we want to catch it.
 	time.Sleep(200 * time.Millisecond)
 
-	c.Assert(s.notifier.log, HasLen, 0)
+	c.Assert(s.notifier.Logs, HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
 	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
@@ -155,22 +155,22 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsDelivers(c *C) 
 	s.backend.deliverNotificationsLogIfError(currentTime)
 
 	timedout := testhelpers.BlockUntilSatisfiedOrTimeout(func() bool {
-		return len(s.notifier.log) >= 2
+		return len(s.notifier.Logs) >= 2
 	}, testBackgroundTaskTimeout)
 
 	c.Assert(timedout, Equals, false)
 
-	c.Assert(s.notifier.log, HasLen, 2)
-	c.Assert(s.notifier.log[0].notifications, HasLen, 1)
-	s.checkNotificationEquality(c, s.notifier.log[0].notifications[0], notification)
+	c.Assert(s.notifier.Logs, HasLen, 2)
+	c.Assert(s.notifier.Logs[0].Notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.Logs[0].Notifications[0], notification)
 
-	c.Assert(s.notifier.log[1].notifications, HasLen, 1)
-	s.checkNotificationEquality(c, s.notifier.log[1].notifications[0], notification)
+	c.Assert(s.notifier.Logs[1].Notifications, HasLen, 1)
+	s.checkNotificationEquality(c, s.notifier.Logs[1].Notifications[0], notification)
 
 	subscribersMatched := 0
 	for _, subscriber := range []backend.Subscriber{s.bob, s.jimmy} {
-		for _, log := range s.notifier.log {
-			if log.subscriber.Name == subscriber.Name {
+		for _, log := range s.notifier.Logs {
+			if log.Subscriber.Name == subscriber.Name {
 				subscribersMatched++
 			}
 		}

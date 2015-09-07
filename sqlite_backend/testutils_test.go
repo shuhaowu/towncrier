@@ -3,7 +3,6 @@ package sqlite_backend
 import (
 	"io/ioutil"
 	"strings"
-	"sync"
 
 	"gitlab.com/shuhao/towncrier/backend"
 	. "gopkg.in/check.v1"
@@ -19,42 +18,6 @@ func (s *SQLiteNotificationBackendSuite) checkNotificationEquality(c *C, obtaine
 	obtained.UpdatedAt = 0
 
 	c.Assert(obtained, DeepEquals, expected)
-}
-
-type NotificationSubscriberCombo struct {
-	notifications []backend.Notification
-	subscriber    backend.Subscriber
-}
-
-type TestNotifier struct {
-	*sync.Mutex
-	log []*NotificationSubscriberCombo
-}
-
-func newTestNotifier() *TestNotifier {
-	return &TestNotifier{
-		Mutex: &sync.Mutex{},
-		log:   []*NotificationSubscriberCombo{},
-	}
-}
-
-func (n *TestNotifier) Name() string {
-	return "testnotify"
-}
-
-func (n *TestNotifier) ShouldSendImmediately() bool {
-	return false
-}
-
-func (n *TestNotifier) Send(notifications []backend.Notification, subscriber backend.Subscriber) error {
-	n.Lock()
-	n.log = append(n.log, &NotificationSubscriberCombo{
-		notifications: notifications,
-		subscriber:    subscriber,
-	})
-	n.Unlock()
-
-	return nil
 }
 
 var originalTestConfigContent []byte = nil
