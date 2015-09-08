@@ -5,7 +5,7 @@ Send notifications/alerts via HTTP. Supports many backends for sending notificat
 
 Other "frontends" (UDP, whatever) maybe possible, but not yet implemented.
 
-Note: if you're viewing this on Github, the official repository is available at https://gitlab.com/shuhao/towncrier. The Github repository serves as a mirror.
+**Note: if you're viewing this on Github, the official repository is available at https://gitlab.com/shuhao/towncrier. The Github repository serves as a mirror. I try my best to keep these two in sync, but the gitlab version may be more recent.**
 
 Detailed documentations available here: WIP
 
