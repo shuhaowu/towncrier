@@ -1,0 +1,8 @@
+Package: towncrier
+Version: 0.0.1
+Section: user/hidden
+Priority: optional
+Architecture: amd64
+Essential: no
+Maintainer: Shuhao Wu <shuhao@shuhaowu.com>
+Description: HTTP to email relay, email aggregator, notification manager.

@@ -47,6 +47,14 @@ Detailed documentations available here: WIP
 Development Setup
 -----------------
 
+### System Requirements ###
+
+- Unix-like systems are recommended, although only Linux is officially supported.
+- Go 1.5 is needed.
+- For deployment, Linux is recommended although cross compilation should be relatively easy.
+
+### Setup ###
+
 1. Install [`godep`](https://github.com/tools/godep) and [`goose`](https://bitbucket.org/liamstask/goose).
 2. Clone the repository into `$GOPATH/src/gitlab.com/shuhao/towncrier`.
 3. `godep go test ./...`
