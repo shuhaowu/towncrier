@@ -2,7 +2,6 @@ package webreceiver
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -65,79 +64,43 @@ func (s *WebReceiverAppSuite) url(path string) string {
 	return s.server.URL + path
 }
 
-func (s *WebReceiverAppSuite) TestPostNotificationNotAuthenticated(c *C) {
-	dataBuf := &bytes.Buffer{}
-	data := NotificationData{
-		Subject:  "subject",
-		Content:  "content",
-		Tags:     []string{"tag1", "tag2"},
-		Priority: "normal",
+func (s *WebReceiverAppSuite) postNotification(channel, token, subject, content, tags, priority string) (*http.Response, error) {
+	client := &http.Client{}
+	contentBuf := bytes.NewBufferString(content)
+	req, err := http.NewRequest("POST", s.url("/receiver/notification/"+channel), contentBuf)
+	if err != nil {
+		return nil, err
 	}
 
-	err := json.NewEncoder(dataBuf).Encode(&data)
-	c.Assert(err, IsNil)
+	if token != "" {
+		req.Header.Add("Authorization", "Token token="+token)
+	}
+	req.Header.Add("X-Towncrier-Subject", subject)
+	req.Header.Add("X-Towncrier-Tags", tags)
+	req.Header.Add("X-Towncrier-Priority", priority)
 
-	resp, err := http.Post(s.url("/receiver/notification/Channel1"), "application/json", dataBuf)
+	return client.Do(req)
+}
+
+func (s *WebReceiverAppSuite) TestPostNotificationNotAuthenticated(c *C) {
+	resp, err := s.postNotification("Channel1", "invalid-token", "subject", "content", "tag1,tag2", "normal")
+	c.Assert(err, IsNil)
+	c.Assert(resp.StatusCode, Equals, http.StatusForbidden)
+
+	resp, err = s.postNotification("Channel1", "", "subject", "content", "tag1,tag2", "normal")
 	c.Assert(err, IsNil)
 	c.Assert(resp.StatusCode, Equals, http.StatusForbidden)
 }
 
-func (s *WebReceiverAppSuite) TestPostNotificationInvalidData(c *C) {
-	dataBuf := &bytes.Buffer{}
-	dataBuf.WriteString("{'invalid': }")
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", s.url("/receiver/notification/invalid-channel"), dataBuf)
-	req.Header.Add("Authorization", "Token token=abc")
-
-	resp, err := client.Do(req)
-	c.Assert(err, IsNil)
-
-	c.Assert(resp.StatusCode, Equals, http.StatusBadRequest)
-}
-
 func (s *WebReceiverAppSuite) TestPostNotificationChannelNotFound(c *C) {
-
-	dataBuf := &bytes.Buffer{}
-	data := NotificationData{
-		Subject:  "subject",
-		Content:  "content",
-		Tags:     []string{"tag1", "tag2"},
-		Priority: "normal",
-	}
-
-	err := json.NewEncoder(dataBuf).Encode(&data)
+	resp, err := s.postNotification("InvalidChannel", "abc", "subject", "content", "tag1,tag2", "normal")
 	c.Assert(err, IsNil)
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", s.url("/receiver/notification/invalid-channel"), dataBuf)
-	req.Header.Add("Authorization", "Token token=abc")
-
-	resp, err := client.Do(req)
-	c.Assert(err, IsNil)
-
 	c.Assert(resp.StatusCode, Equals, http.StatusNotFound)
 }
 
 func (s *WebReceiverAppSuite) TestPostNotificationSuccess(c *C) {
-	dataBuf := &bytes.Buffer{}
-	data := NotificationData{
-		Subject:  "subject",
-		Content:  "content",
-		Tags:     []string{"tag1", "tag2"},
-		Priority: "normal",
-	}
-
-	err := json.NewEncoder(dataBuf).Encode(&data)
+	resp, err := s.postNotification("Channel1", "abc", "subject", "content", "tag1,tag2", "normal")
 	c.Assert(err, IsNil)
-
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", s.url("/receiver/notification/Channel1"), dataBuf)
-	req.Header.Add("Authorization", "Token token=abc")
-
-	resp, err := client.Do(req)
-	c.Assert(err, IsNil)
-
 	c.Assert(resp.StatusCode, Equals, http.StatusAccepted)
 
 	var notifications []*sqlite_backend.Notification

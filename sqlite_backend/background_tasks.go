@@ -27,7 +27,7 @@ func (b *SQLiteNotificationBackend) doConfigReloadLogIfError() {
 // 3. Send each notifications
 //
 func (b *SQLiteNotificationBackend) deliverNotificationsLogIfError(currentTime time.Time) {
-	logger.Info("attempting to deliver notifications")
+	logger.Info("checking for notification delivery")
 
 	// No need to lock as we only access one thing
 	channels := b.config.Channels

@@ -92,7 +92,7 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsWillNotWithoutN
 	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
 	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
-	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "attempting to deliver notifications")
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "checking for notification delivery")
 
 	notification := &Notification{
 		Notification: s.notification,
@@ -112,7 +112,7 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsWillNotWithoutN
 	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
 	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
-	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "attempting to deliver notifications")
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "checking for notification delivery")
 
 	notification.Delivered = false
 	_, err = s.backend.Update(notification)
@@ -130,7 +130,7 @@ func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsWillNotWithoutN
 	c.Assert(logrusTestHook.Logs[logrus.InfoLevel], HasLen, 1)
 	c.Assert(logrusTestHook.Logs[logrus.WarnLevel], HasLen, 0)
 	c.Assert(logrusTestHook.Logs[logrus.ErrorLevel], HasLen, 0)
-	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "attempting to deliver notifications")
+	c.Assert(logrusTestHook.Logs[logrus.InfoLevel][0].Message, Equals, "checking for notification delivery")
 }
 
 func (s *SQLiteNotificationBackendSuite) TestDeliverNotificationsDelivers(c *C) {

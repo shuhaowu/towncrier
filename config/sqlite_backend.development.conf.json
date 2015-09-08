@@ -1,0 +1,32 @@
+{
+  "Subscribers": [
+    {
+      "UniqueName": "jimmy",
+      "Name": "Jimmy the Cat",
+      "Email": "jimmy@the.cat",
+      "PhoneNumber": ""
+    }
+  ],
+  "Channels": [
+    {
+      "Name": "Immediate",
+      "Subscribers": [
+        "jimmy"
+      ],
+      "Notifiers": [
+        "EmailViaSMTP"
+      ],
+      "TimeToNotify": "@immediately"
+    },
+    {
+      "Name": "Hourly",
+      "Subscribers": [
+        "jimmy"
+      ],
+      "Notifiers": [
+        "EmailViaSMTP"
+      ],
+      "TimeToNotify": "@hourly"
+    }
+  ]
+}

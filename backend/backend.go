@@ -23,7 +23,7 @@ func RegisterBackend(backend NotificationBackend) {
 func GetBackend(name string) NotificationBackend {
 	backend, found := availableBackends[name]
 	if !found {
-		panic(fmt.Sprintf("backend %s not found", backend))
+		panic(fmt.Sprintf("backend %s not found", name))
 	}
 	return backend
 }

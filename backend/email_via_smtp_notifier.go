@@ -71,6 +71,28 @@ type EmailViaSMTPNotifier struct {
 	sendMailFunc func(string, smtp.Auth, string, []string, []byte) error
 }
 
+func printMail(addr string, a smtp.Auth, from string, to []string, body []byte) error {
+	fmt.Println("")
+	fmt.Println(string(body))
+	fmt.Println("")
+	return nil
+}
+
+type EmailViaSMTPConfig struct {
+	Username  string
+	Password  string
+	SelfEmail string
+	DoNotSend bool
+}
+
+func (c EmailViaSMTPConfig) ToNotifier() *EmailViaSMTPNotifier {
+	notifier := NewEmailViaGmailNotifier(c.Username, c.Password, c.SelfEmail)
+	if c.DoNotSend {
+		notifier.sendMailFunc = printMail
+	}
+	return notifier
+}
+
 func NewEmailViaSMTPNotifier(hostname string, port int, authenticator smtp.Auth, selfEmail string) *EmailViaSMTPNotifier {
 	return &EmailViaSMTPNotifier{
 		Hostname:      hostname,

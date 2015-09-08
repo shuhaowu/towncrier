@@ -74,7 +74,7 @@ func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 
 	config, err := LoadConfig(data[1])
 	if err != nil {
-		return fmt.Errorf("could not open config at '%s/' with error: %v", data[1], err)
+		return fmt.Errorf("could not open config at '%s' with error: %v", data[1], err)
 	}
 
 	b.DbMap = dbmap

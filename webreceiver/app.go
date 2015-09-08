@@ -1,7 +1,7 @@
 package webreceiver
 
 import (
-	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -16,29 +16,6 @@ import (
 
 var realLogger = logrus.New()
 var logger = realLogger.WithField("component", "webreceiver")
-
-type NotificationData struct {
-	Subject  string
-	Content  string
-	Tags     []string
-	Priority string
-}
-
-func (n NotificationData) ToNotification(channel, origin string) backend.Notification {
-	priority, found := backend.PriorityMap[n.Priority]
-	if !found {
-		priority = backend.NormalPriority
-	}
-
-	return backend.Notification{
-		Subject:  n.Subject,
-		Content:  n.Content,
-		Tags:     n.Tags,
-		Priority: priority,
-		Channel:  channel,
-		Origin:   origin,
-	}
-}
 
 type App struct {
 	router  *mux.Router
@@ -89,14 +66,27 @@ func (a *App) PostNotificationHandler(w http.ResponseWriter, r *http.Request) {
 
 	urlParams := mux.Vars(r)
 
-	notificationData := NotificationData{}
-	err := json.NewDecoder(r.Body).Decode(&notificationData)
+	notification := backend.Notification{}
+
+	notificationContentBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	notification := notificationData.ToNotification(urlParams["channel"], origin)
+	notification.Content = string(notificationContentBytes)
+
+	notification.Subject = r.Header.Get("X-Towncrier-Subject")
+	notification.Tags = strings.Split(r.Header.Get("X-Towncrier-Tags"), ",")
+	notification.Channel = urlParams["channel"]
+	notification.Origin = origin
+
+	var found bool
+	notification.Priority, found = backend.PriorityMap[r.Header.Get("X-Towncrier-Priority")]
+	if !found {
+		notification.Priority = backend.NormalPriority
+	}
+
 	err = a.backend.QueueNotification(notification)
 	if err != nil {
 		if _, ok := err.(backend.ChannelNotFound); ok {

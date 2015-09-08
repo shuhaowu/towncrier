@@ -1,0 +1,23 @@
+{
+  "BackendName": "sqlite",
+  "BackendOpenString": "db/towncrier.development.db,config/sqlite_backend.development.conf.json",
+  "Environment": "development",
+
+  "Receiver": {
+    "ListenHost": "127.0.0.1",
+    "ListenPort": 4891,
+    "PathPrefix": "/receiver",
+    "Tokens": {
+      "testtoken": "test_client"
+    }
+  },
+
+  "Notifiers": {
+    "EmailViaSMTP": {
+      "Username": "none",
+      "Password": "none",
+      "SelfEmail": "towncrier@localhost",
+      "DoNotSend": true
+    }
+  }
+}

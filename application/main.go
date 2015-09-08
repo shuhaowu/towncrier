@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"gitlab.com/shuhao/towncrier/backend"
+	_ "gitlab.com/shuhao/towncrier/sqlite_backend"
 	"gitlab.com/shuhao/towncrier/webreceiver"
 
 	"github.com/Sirupsen/logrus"
@@ -35,6 +36,8 @@ func init() {
 	if err != nil {
 		logger.WithField("error", err).Panic("cannot parse application config")
 	}
+
+	applicationConfig.Notifiers.HookAllNotifiers()
 }
 
 func main() {
@@ -47,8 +50,13 @@ func main() {
 	}
 
 	notificationBackend.Start(wg)
+	defer func() {
+		notificationBackend.Shutdown()
+		wg.Wait()
+	}()
+
 	notificationBackend.BlockUntilReady()
-	receiverApp = webreceiver.NewApp(notificationBackend, applicationConfig.Receiver)
+	receiverApp := webreceiver.NewApp(notificationBackend, applicationConfig.Receiver)
 
 	receiverServer := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", applicationConfig.Receiver.ListenHost, applicationConfig.Receiver.ListenPort),
