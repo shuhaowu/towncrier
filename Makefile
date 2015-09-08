@@ -16,7 +16,8 @@ BUILD_TIME=$(shell date -u +%Y%m%d%H%M)
 
 release: $(TOWNCRIER_TARGET_PATH) $(GOOSE_TARGET_PATH) $(REVISION_TARGET_PATH) $(BUILD_TIME_TARGET_PATH) $(CONTROL_TARGET_PATH)
 	mkdir -p $(INSTALLDIR)/config
-	mkdir -p $(INSTALLDIR)/db
+	cp -r db $(INSTALLDIR)
+	rm -f $(INSTALLDIR)/db/towncrier.development.db
 
 	cp LICENSE $(INSTALLDIR)/towncrier-license
 	echo "goose is distributed under the MIT license. See https://bitbucket.org/liamstask/goose for details." > $(INSTALLDIR)/goose-license
