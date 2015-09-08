@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"gitlab.com/shuhao/towncrier/backend"
 
@@ -31,7 +32,7 @@ func NewApp(be backend.NotificationBackend, config ReceiverConfig) *App {
 
 	app.router = mux.NewRouter()
 	subrouter := app.router.PathPrefix(app.config.PathPrefix)
-	subrouter.Methods("POST").Path("/notification/{channel}").HandlerFunc(app.PostNotificationHandler)
+	subrouter.Methods("POST").Path("/notifications/{channel}").HandlerFunc(app.PostNotificationHandler)
 
 	return app
 }
@@ -74,7 +75,7 @@ func (a *App) PostNotificationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notification.Content = string(notificationContentBytes)
+	notification.Content = strings.TrimSpace(string(notificationContentBytes))
 
 	notification.Subject = r.Header.Get("X-Towncrier-Subject")
 	notification.Tags = strings.Split(r.Header.Get("X-Towncrier-Tags"), ",")
@@ -95,11 +96,20 @@ func (a *App) PostNotificationHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		logger.WithField("error", err).Error("failed to queue notification")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
 	a.router.ServeHTTP(w, r)
+
+	logger.WithFields(logrus.Fields{
+		"path": r.RequestURI,
+		"time": time.Now().Sub(start),
+	}).Info("served request")
 }

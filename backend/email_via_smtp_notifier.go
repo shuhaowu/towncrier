@@ -72,6 +72,7 @@ type EmailViaSMTPNotifier struct {
 }
 
 func printMail(addr string, a smtp.Auth, from string, to []string, body []byte) error {
+	fmt.Println("not sending an real email as that is disabled via DoNotSend, email is printed below")
 	fmt.Println("")
 	fmt.Println(string(body))
 	fmt.Println("")

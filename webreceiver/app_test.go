@@ -67,7 +67,7 @@ func (s *WebReceiverAppSuite) url(path string) string {
 func (s *WebReceiverAppSuite) postNotification(channel, token, subject, content, tags, priority string) (*http.Response, error) {
 	client := &http.Client{}
 	contentBuf := bytes.NewBufferString(content)
-	req, err := http.NewRequest("POST", s.url("/receiver/notification/"+channel), contentBuf)
+	req, err := http.NewRequest("POST", s.url("/receiver/notifications/"+channel), contentBuf)
 	if err != nil {
 		return nil, err
 	}

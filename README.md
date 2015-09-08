@@ -50,7 +50,7 @@ Development Setup
 1. Install [`godep`](https://github.com/tools/godep) and [`goose`](https://bitbucket.org/liamstask/goose).
 2. Clone the repository into `$GOPATH/src/gitlab.com/shuhao/towncrier`.
 3. `godep go test ./...`
-4. `script/server`
+4. `script/devserver`
 
 License
 -------
