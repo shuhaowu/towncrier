@@ -60,6 +60,7 @@ func init() {
 func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 	data := strings.Split(openString, ",")
 
+	logger.Infof("initializing database at %v", data[0])
 	db, err := sql.Open("sqlite3", data[0])
 	if err != nil {
 		return fmt.Errorf("could not open db %s with error: %v", data[0], err)
@@ -76,6 +77,14 @@ func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 	if err != nil {
 		return fmt.Errorf("could not open config at '%s' with error: %v", data[1], err)
 	}
+
+	channelNames := make([]string, len(config.Channels))
+	i := 0
+	for cn, _ := range config.Channels {
+		channelNames[i] = cn
+	}
+
+	logger.Infof("initialized with channels: %v", channelNames)
 
 	b.DbMap = dbmap
 	b.config = config
