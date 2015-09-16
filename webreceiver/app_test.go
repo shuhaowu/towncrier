@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"gitlab.com/shuhao/towncrier/backend"
 	"gitlab.com/shuhao/towncrier/sqlite_backend"
@@ -102,6 +103,11 @@ func (s *WebReceiverAppSuite) TestPostNotificationSuccess(c *C) {
 	resp, err := s.postNotification("Channel1", "abc", "subject", "content", "tag1,tag2", "normal")
 	c.Assert(err, IsNil)
 	c.Assert(resp.StatusCode, Equals, http.StatusAccepted)
+
+	timedout := testhelpers.BlockUntilSatisfiedOrTimeout(func() bool {
+		return len(s.notifier.Logs) >= 1
+	}, 5*time.Second)
+	c.Assert(timedout, Equals, false)
 
 	var notifications []*sqlite_backend.Notification
 	_, err = s.backend.Select(&notifications, "SELECT * FROM notifications WHERE Channel = ?", "Channel1")

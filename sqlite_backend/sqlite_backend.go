@@ -82,9 +82,10 @@ func (b *SQLiteNotificationBackend) Initialize(openString string) error {
 	i := 0
 	for cn, _ := range config.Channels {
 		channelNames[i] = cn
+		i++
 	}
 
-	logger.Infof("initialized with channels: %v", channelNames)
+	logger.Infof("initialized with channels: %v", strings.Join(channelNames, ", "))
 
 	b.DbMap = dbmap
 	b.config = config
@@ -122,7 +123,14 @@ func (b *SQLiteNotificationBackend) QueueNotification(notification backend.Notif
 		return nil
 	}
 
-	return b.sendNotifications([]*Notification{localNotification}, channel, subscribers)
+	go func() {
+		err := b.sendNotifications([]*Notification{localNotification}, channel, subscribers)
+		if err != nil {
+			logger.WithField("error", err).Error("failed to send notification")
+		}
+	}()
+
+	return nil
 }
 
 func (b *SQLiteNotificationBackend) Name() string {

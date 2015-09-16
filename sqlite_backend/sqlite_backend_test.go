@@ -3,6 +3,7 @@ package sqlite_backend
 import (
 	"sort"
 	"testing"
+	"time"
 
 	"gitlab.com/shuhao/towncrier/backend"
 	"gitlab.com/shuhao/towncrier/testhelpers"
@@ -17,6 +18,8 @@ func Test(t *testing.T) {
 
 	TestingT(t)
 }
+
+const testQueueNotificationSendTimeout = 5 * time.Second
 
 type SQLiteNotificationBackendSuite struct {
 	backend  *SQLiteNotificationBackend
@@ -91,6 +94,8 @@ func (s *SQLiteNotificationBackendSuite) SetUpTest(c *C) {
 	s.notifier = testhelpers.NewTestNotifier()
 	backend.ClearAllNotifiers()
 	backend.RegisterNotifier(s.notifier)
+
+	logrusTestHook.ClearLogs()
 }
 
 func (s *SQLiteNotificationBackendSuite) TestBackendInitialize(c *C) {
@@ -119,6 +124,11 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationSendImmediately(c 
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
 
+	timedout := testhelpers.BlockUntilSatisfiedOrTimeout(func() bool {
+		return len(s.notifier.Logs) >= 1
+	}, testQueueNotificationSendTimeout)
+	c.Assert(timedout, Equals, false)
+
 	c.Assert(s.notifier.Logs, HasLen, 1)
 	c.Assert(s.notifier.Logs[0].Notifications, HasLen, 1)
 	s.checkNotificationEquality(c, s.notifier.Logs[0].Notifications[0], notification)
@@ -140,6 +150,11 @@ func (s *SQLiteNotificationBackendSuite) TestQueueUrgentNotificationSendImmediat
 
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
+
+	timedout := testhelpers.BlockUntilSatisfiedOrTimeout(func() bool {
+		return len(s.notifier.Logs) >= 2
+	}, testQueueNotificationSendTimeout)
+	c.Assert(timedout, Equals, false)
 
 	c.Assert(s.notifier.Logs, HasLen, 2)
 	c.Assert(s.notifier.Logs[0].Notifications, HasLen, 1)
@@ -175,6 +190,8 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationDoNotSendImmediate
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
 
+	time.Sleep(200 * time.Microsecond)
+
 	c.Assert(s.notifier.Logs, HasLen, 0)
 
 	notifications := []*Notification{}
@@ -195,6 +212,8 @@ func (s *SQLiteNotificationBackendSuite) TestQueueNotificationNeverSendNotificat
 
 	err := s.backend.QueueNotification(notification)
 	c.Assert(err, IsNil)
+
+	time.Sleep(200 * time.Microsecond)
 
 	c.Assert(s.notifier.Logs, HasLen, 0)
 

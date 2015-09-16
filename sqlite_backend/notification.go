@@ -74,13 +74,14 @@ func (b *SQLiteNotificationBackend) sendNotifications(notifications []*Notificat
 				continue
 			}
 
+			localLog := logger.WithFields(logrus.Fields{
+				"subscriber": subscriber.UniqueName,
+				"notifier":   notifierName,
+			})
+			localLog.Info("sending notification")
 			err := notifier.Send(backendNotificationObjects, subscriber)
 			if err != nil {
-				logger.WithFields(logrus.Fields{
-					"error":      err,
-					"subscriber": subscriber.UniqueName,
-					"notifier":   notifierName,
-				}).Errorf("failed to send notification")
+				localLog.WithField("error", err).Errorf("failed to send notification")
 				failedToSendError.AddError(subscriber.UniqueName, err)
 			}
 		}
